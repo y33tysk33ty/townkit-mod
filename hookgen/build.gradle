@@ -1,0 +1,36 @@
+plugins {
+    id 'application'
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+repositories {
+    // Offline builds only see artifacts through the repository they were cached from
+    maven { url = 'https://maven.neoforged.net/releases' }
+    maven { url = 'https://libraries.minecraft.net' }
+    mavenCentral()
+}
+
+// The generator runs the mod's real injector on the Towntopia jar to measure code growth, so it shares those two files
+sourceSets.main.java {
+    srcDir '../src/main/java'
+    include 'townkit/hookgen/**', 'townkit/core/hook/HookInjector.java', 'townkit/core/hook/HookInfo.java'
+}
+
+dependencies {
+    implementation 'org.ow2.asm:asm:9.8'
+    implementation 'org.ow2.asm:asm-tree:9.8'
+    implementation 'com.google.code.gson:gson:2.10.1'
+    compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testCompileOnly 'com.google.code.findbugs:jsr305:3.0.2'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+application {
+    mainClass = 'townkit.hookgen.HookGen'
+}

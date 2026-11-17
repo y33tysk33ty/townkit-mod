@@ -1,0 +1,29 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="LGPL-3.0-only"
+
+[[mods]]
+modId="townkit"
+version="${mod_version}"
+displayName="TownKit"
+description='''Library mod for Towntopia addons: hooks on nearly every Towntopia method, typed events, read APIs and performance tracking. Holds all Towntopia mixins so addons don't have to.'''
+
+[[mixins]]
+config="townkit.mixins.json"
+
+[[mixins]]
+config="townkit.hooks.mixins.json"
+
+[[dependencies.townkit]]
+    modId="${towntopia_modid}"
+    type="required"
+    versionRange="[${towntopia_version},)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.townkit]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1.238,)"
+    ordering="NONE"
+    side="BOTH"

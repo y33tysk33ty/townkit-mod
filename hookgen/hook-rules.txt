@@ -1,0 +1,55 @@
+# TownKit hook generator rules.
+# Class names are relative to com.alex.test (e.g. village.NavGraph); '*' is a wildcard.
+# "Class" alone excludes the whole class; "Class#regex" excludes matching methods.
+# "@thread Class#regex" marks hooks that run off the main server thread (listeners must be thread-safe).
+# "@carrier Class" targets a class with the carrier mixins although it gets no hooks (for the nav-site rewrite).
+# "keep Class#regex" brings back a hook the 0.6.1 trim cut (private method, plain getter/setter, data-class
+#   constructor, packet plumbing in network). It never overrides an exclusion here or abstract/synthetic/huge methods.
+#   Example: keep village.FollowWalk#tickLine
+#
+# Exclusions are the hot paths measured or read in Towntopia's code: called per node, per step or per block
+# inside searches and scans, hundreds of thousands of times per tick. Hooking them would cost real time.
+
+# Route map internals: nodes, cells, pieces, Tarjan, flood fill helpers
+village.NavNode
+village.nav.*
+village.NavCells
+village.NavDirtyTracker
+village.NavGraph#(nodeAt|nearest.*|nearestMatching|forEachNodeInBox|nodesInBox|nodesInCells|columnNodes|isLive|cellKey|isPassable|isSolidSurface|standY|hasStandingRoom|standingCandidate|isDryWalkable|isLedgeSafe|hasReachableLanding|hasDeepWaterLandingBelow|findReachableSurfaceY|isClearUpTo|hasStepHeadroom|makeNode|makeClimbNode|makeWaterNode|tryCreateSeed|isBesideCauldron|sectionMayHaveCauldron|scanLadderNeighbour|obtainLadderNode|obtainWaterNode|isLadder|isClimbableRung|tryLinkWaterNeighbour|linkDryToWaterDrop|linkWaterToWater|isDeepWaterLanding|isWater|isAlongPortalAxis|portalAxis|isOpenTrapdoor|floorCoveringHeight|crossesTrapdoorPlate|hasTrapdoorPlateOn|isVanillaImpassable|isNavigationNeutral|isHazard|feetCell|record|inRegion|isAdjacentToRegion|inAnyRegion|reindexColumn|freezeColumnIndex|index|floodFillInner|nodesAround|isInsideBounds|isWalkableAtXZ|changedSince|chunksLoaded|bandHoldsWater|keepBoxes)
+village.NavGraph$*
+# A*: only the entry point is hooked, and it runs on worker threads
+village.AStarPathfinder#(?!findRoute$).*
+# A*'s priority-queue record (0.1.2): ~68,600 calls a tick inside the search loop in the Oct 26 2026 census
+village.AStarPathfinder$Entry
+@worker village.AStarPathfinder#findRoute
+# A*'s own records (route, search result, queue entry, stats) and its route rules are called from the background search too
+@worker village.AStarPathfinder$*
+@worker village.RouteRules
+village.NavReachability
+# Room and enclosure scans: per-node steps inside the flood
+village.building.RoomScanner#(?!scan$|scanDetailed$|openEdgeShare$).*
+village.building.EnclosureScanner#(?!scan$).*
+village.building.BuildingSpace#(?!measure$).*
+# Building geometry checks used inside loops over all buildings and blocks
+village.building.Building#(isInRoom|isNearRoom|mayAffectRoom|roomBoxNear|reachesFromRoom|isFunctionalBlockAccessibleFromRoom|getWalkTargetBeside|getWalkTargetBesideAny|getWalkTargetNear|computeBounds|shellMin|shellMax|roomBox|entryTile)
+# Per-tick timing, staggering and small math helpers
+village.brain.TickStagger*
+village.stats.StatMath
+village.WalkFeel
+village.LegShape
+# Claims and knowledge lookups called per candidate block by workers
+village.ClaimsRegistry#(isClaimedByOther|holder)
+village.knowledge.KnowledgeBase#(contains|get|count)
+# Off-thread work (save-file scan for missing villagers)
+@worker village.SaveFileBodyScan*
+
+# Carrier only (no hooks): handed to TownKit's mixin plugin so its nav sites (nav-sites.tsv) are rewritten.
+# NavCells$1 is the reachability TileAdapter (anonymous, so never hooked).
+@carrier village.NavCells$1
+
+# War addon (0.6.2): hooks the 0.6.1 trim cut that a war-style addon needs
+keep village.villagers.cleric.behavior.ClericCare#candidates
+keep client.VillagerGeoModel#rigSkin
+keep entity.mayor.MayorSpawnManager#ensureMayor
+keep village.villagers.guard.behavior.GuardThreatEvents#resolveManager
+keep village.VillageCrowding#isInside

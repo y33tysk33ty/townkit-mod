@@ -1,0 +1,7 @@
+{
+  "animation_file": "townkit:animations/townkit/check_moves.animation.json",
+  "animation": "townkit.check_march",
+  "props": [
+    "townkit:check_banner"
+  ]
+}

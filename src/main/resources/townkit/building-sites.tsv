@@ -1,0 +1,236 @@
+# TownKit building check sites (Towntopia 0.1.2), audited 2026-10-31.
+# Columns: owner<TAB>method<TAB>kind<TAB>target<TAB>verdict<TAB>note<TAB>count. Site id = row index (comments skipped).
+# count (scoped owners): how many times the key occurs in that method of the 0.1.2 jar. The rewriter leaves a method
+# alone when the loaded class has another count (a new check of the same block would share the audited verdict).
+# Verdicts: SAFE (a stand-in counts), NEEDS:<check> (counts if the block passes that check), UNSAFE (never),
+# AUDIT_ONLY (recorded for the notes, never rewritten). A site missing here never counts a stand-in.
+# Scoped owners (classes whose sites TownKit rewrites), each with why:
+# scope village/building/ArcheryRangeBuilding
+#   building scan (targets, fletching tables, hay)
+# scope village/building/BarracksBuilding
+#   building scan (beds)
+# scope village/building/BuildingSpace
+#   crowding count (beds, Towntopia chairs)
+# scope village/building/ButcheryBuilding
+#   building scan (chopping block, grindstone)
+# scope village/building/CauldronIndex
+#   building helper (cauldrons)
+# scope village/building/EnclosureScanner
+#   building helper (pen walls)
+# scope village/building/ForgeBuilding
+#   building scan (anvil, furnaces, smithing table) and the smith's stand spot
+# scope village/building/HouseBuilding
+#   building scan (beds)
+# scope village/building/KitchenBuilding
+#   building scan (heat sources, crafting table)
+# scope village/building/LibraryBuilding
+#   building scan (bookshelves, enchanting table)
+# scope village/building/MageTowerBuilding
+#   building scan (study stations, shelves, crystals, beds)
+# scope village/building/MerchantStallBuilding
+#   building scan (sell barrels)
+# scope village/building/MuddyCauldrons
+#   building helper (cauldrons)
+# scope village/building/RoomScanner
+#   room shape (doors, stairs)
+# scope village/building/SchoolBuilding
+#   building scan (lecterns)
+# scope village/building/StorageBuilding
+#   building scan (crafting table, furnace, stonecutter, composter)
+# scope village/building/StorageContainers
+#   storage helper (chests, barrels) used by every storage read
+# scope village/building/TavernBuilding
+#   building scan (stage, guest beds)
+# scope village/building/TownHallBuilding
+#   building scan (beds)
+# scope village/building/WatchtowerBuilding
+#   building scan (bell)
+# scope village/VillageBeds
+#   bed assignment
+# scope village/VillageManager
+#   re-checks the assigned bed (isSleepingInAssignedBed)
+# scope village/brain/GoHomeActivity
+#   re-checks the bed before sleeping
+# scope village/brain/LibraryActivity
+#   re-checks library bookshelves
+# scope village/villagers/cook/behavior/CookActivity
+#   re-checks the kitchen heat source
+# scope village/villagers/blacksmith/behavior/BlacksmithActivity
+#   re-checks the forge furnace
+# scope village/villagers/blacksmith/behavior/BlacksmithActivity$Offline
+#   re-checks the forge furnace (catch-up)
+# scope village/villagers/archer/ArcherEvents
+#   re-checks practice targets on arrow hits
+# scope village/villagers/archer/behavior/ArcherPracticeRange
+#   re-checks practice targets
+# scope village/villagers/archer/behavior/ArrowRecovery
+#   re-checks hay bales
+# scope village/villagers/archer/behavior/FletchArrowsActivity
+#   re-checks fletching/crafting tables
+# scope village/villagers/archer/behavior/LookoutWatch
+#   re-checks the watchtower bell
+# scope village/villagers/teacher/behavior/TeacherActivity
+#   re-checks school bookshelves
+# scope village/villagers/tradesman/SellBox
+#   re-checks the stall's sell barrels
+# scope village/villagers/tradesman/SellBoxEvents
+#   re-checks a clicked sell barrel
+# scope village/villagers/farmer/FarmerCompost
+#   re-checks the storage room's composter
+#
+ui/screen/RanchRoomScreen	isFence(Lnet/minecraft/world/level/block/state/BlockState;)Z	INSTANCEOF	net/minecraft/world/level/block/FenceBlock	AUDIT_ONLY	excluded: client screen
+ui/screen/RanchRoomScreen	isFence(Lnet/minecraft/world/level/block/state/BlockState;)Z	INSTANCEOF	net/minecraft/world/level/block/FenceGateBlock	AUDIT_ONLY	excluded: client screen
+ui/screen/RanchRoomScreen	isFence(Lnet/minecraft/world/level/block/state/BlockState;)Z	INSTANCEOF	net/minecraft/world/level/block/WallBlock	AUDIT_ONLY	excluded: client screen
+ui/screen/RanchRoomScreen	isFence(Lnet/minecraft/world/level/block/state/BlockState;)Z	INSTANCEOF	net/minecraft/world/level/block/IronBarsBlock	AUDIT_ONLY	excluded: client screen
+ui/screen/RanchRoomScreen	scanBlocks()Lcom/alex/test/ui/screen/RanchRoomScreen$BlockScan;	INSTANCEOF	net/minecraft/world/level/block/FenceGateBlock	AUDIT_ONLY	excluded: client screen
+ui/screen/RanchRoomScreen	scanBlocks()Lcom/alex/test/ui/screen/RanchRoomScreen$BlockScan;	BLOCK_IS	GRASS_BLOCK	AUDIT_ONLY	excluded: client screen
+ui/screen/RanchRoomScreen	scanBlocks()Lcom/alex/test/ui/screen/RanchRoomScreen$BlockScan;	BLOCK_IS	SHORT_GRASS	AUDIT_ONLY	excluded: client screen
+ui/screen/RanchRoomScreen	halfStep(Lnet/minecraft/world/level/block/state/BlockState;)Z	INSTANCEOF	net/minecraft/world/level/block/StairBlock	AUDIT_ONLY	excluded: client screen
+ui/screen/RanchRoomScreen	halfStep(Lnet/minecraft/world/level/block/state/BlockState;)Z	INSTANCEOF	net/minecraft/world/level/block/SlabBlock	AUDIT_ONLY	excluded: client screen
+ui/screen/StorageRoomScreen	doorCells(Lnet/minecraft/client/multiplayer/ClientLevel;)Ljava/util/List;	INSTANCEOF	net/minecraft/world/level/block/DoorBlock	AUDIT_ONLY	excluded: client screen
+ui/screen/StorageRoomScreen	addRealWalls(Lnet/minecraft/client/multiplayer/ClientLevel;Ljava/util/Set;Ljava/util/Set;)V	INSTANCEOF	net/minecraft/world/level/block/DoorBlock	AUDIT_ONLY	excluded: client screen
+ui/screen/StorageRoomScreen	addRealWalls(Lnet/minecraft/client/multiplayer/ClientLevel;Ljava/util/Set;Ljava/util/Set;)V	INSTANCEOF	com/alex/test/block/WoodenChairBlock	AUDIT_ONLY	excluded: client screen
+village/NavNode	isAvoidedSurface()Z	INSTANCEOF	net/minecraft/world/level/block/BedBlock	AUDIT_ONLY	nav, not rewritten: crafting tables, beds and storage are surfaces villagers don't stand on (storage goes through StorageContainers, so storage stand-ins are avoided too; crafting-table stand-ins are not)
+village/NavNode	isAvoidedSurface()Z	INSTANCEOF	net/minecraft/world/level/block/LiquidBlock	AUDIT_ONLY	nav, not rewritten: crafting tables, beds and storage are surfaces villagers don't stand on (storage goes through StorageContainers, so storage stand-ins are avoided too; crafting-table stand-ins are not)
+village/NavNode	isAvoidedSurface()Z	BLOCK_EQUALS	CRAFTING_TABLE	AUDIT_ONLY	nav, not rewritten: crafting tables, beds and storage are surfaces villagers don't stand on (storage goes through StorageContainers, so storage stand-ins are avoided too; crafting-table stand-ins are not)
+village/VillageBeds	isAssignableBedForBuilding(Lnet/minecraft/core/BlockPos;Ljava/util/UUID;)Z	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/VillageBeds	bedProblem(Lcom/alex/test/village/VillagerModel;Lcom/alex/test/village/building/Building;Lnet/minecraft/core/BlockPos;Z)Ljava/lang/String;	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/VillageBeds	describeBedSideTiles(Lcom/alex/test/village/VillagerModel;Lcom/alex/test/village/building/Building;Lnet/minecraft/core/BlockPos;)Ljava/lang/String;	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/VillageBeds	isClaimedBedGone(Ljava/util/UUID;)Z	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/VillageBeds	requestBedInTownHall(Lcom/alex/test/village/VillagerModel;Lcom/alex/test/village/building/TownHallBuilding;)Lnet/minecraft/core/BlockPos;	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/VillageManager	isSleepingInAssignedBed(Lcom/alex/test/village/VillagerModel;)Z	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/VillageManager	routeCropGrow(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V	BLOCK_IS	SUGAR_CANE	UNSAFE	crop growth routing, not a building role	1
+village/VillageManager	routeCropGrow(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V	INSTANCEOF	net/minecraft/world/level/block/StemBlock	UNSAFE	crop growth routing, not a building role	1
+village/VillageManager	routeCropGrow(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V	INSTANCEOF	net/minecraft/world/level/block/AttachedStemBlock	UNSAFE	crop growth routing, not a building role	2
+village/VillageManager	routeCropGrow(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V	INSTANCEOF	net/minecraft/world/level/block/CropBlock	UNSAFE	crop growth routing, not a building role	1
+village/VillageManager	registerCane(Lnet/minecraft/core/BlockPos;)V	BLOCK_IS	SUGAR_CANE	UNSAFE	crop growth routing, not a building role	1
+village/brain/GoHomeActivity	isBedHead(Lcom/alex/test/village/brain/Activity$Context;Lnet/minecraft/core/BlockPos;)Z	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/brain/GoHomeActivity	isSleepableTile(Lcom/alex/test/village/brain/Activity$Context;Lcom/alex/test/village/NavGraph;Lnet/minecraft/core/BlockPos;)Z	BLOCK_IS	LADDER	UNSAFE	structure block (doors, gates, fences, walls, stairs, ladders) for walking and room shape, not a working-block role	1
+village/brain/GoHomeActivity	isStandingOffLadder(Lcom/alex/test/village/brain/Activity$Context;)Z	BLOCK_IS	LADDER	UNSAFE	structure block (doors, gates, fences, walls, stairs, ladders) for walking and room shape, not a working-block role	1
+village/brain/LibraryActivity	shelfBeside(Lcom/alex/test/village/brain/Activity$Context;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/core/BlockPos;	BLOCK_IS	BOOKSHELF	SAFE	picks a reading spot facing a shelf; no block access	1
+village/brain/LibraryActivity	suitableChairs(Lcom/alex/test/village/brain/Activity$Context;Lcom/alex/test/village/building/LibraryBuilding;)Ljava/util/List;	BLOCK_IS	BOOKSHELF	SAFE	picks a reading spot facing a shelf; no block access	1
+village/building/ArcheryRangeBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	BLOCK_IS	TARGET	SAFE	archers aim at targets / stand at tables; hay is counted; no cast or property read	1
+village/building/ArcheryRangeBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	BLOCK_IS	FLETCHING_TABLE	SAFE	archers aim at targets / stand at tables; hay is counted; no cast or property read	1
+village/building/ArcheryRangeBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	BLOCK_IS	HAY_BLOCK	SAFE	archers aim at targets / stand at tables; hay is counted; no cast or property read	1
+village/building/ArcheryRangeBuilding	standsOnFurniture(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;)Z	BLOCK_IS	TARGET	SAFE	lane tiles avoid standing on it	1
+village/building/ArcheryRangeBuilding	standsOnFurniture(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;)Z	BLOCK_IS	HAY_BLOCK	SAFE	lane tiles avoid standing on it	1
+village/building/ArcheryRangeBuilding	standsOnFurniture(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;)Z	BLOCK_IS	FLETCHING_TABLE	SAFE	lane tiles avoid standing on it	1
+village/building/BarracksBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	2
+village/building/BarracksBuilding	getWalkTargetBesideBed(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lcom/alex/test/village/NavGraph;Lnet/minecraft/core/BlockPos;Ljava/util/function/Predicate;)Lnet/minecraft/core/BlockPos;	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/building/BuildingSpace	measure(Lnet/minecraft/server/level/ServerLevel;Ljava/util/Set;Ljava/util/Map;)Lcom/alex/test/village/building/BuildingSpace$Result;	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/building/BuildingSpace	isFurniture(Lnet/minecraft/world/level/block/state/BlockState;)Z	INSTANCEOF	com/alex/test/block/WoodenChairBlock	UNSAFE	Towntopia's own chair class, not a vanilla block (furniture comes from the towntopia:furniture tag)	1
+village/building/ButcheryBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	BLOCK_IS	GRINDSTONE	SAFE	butcher only walks to it and plays an animation (ButcherActivity.tickSharpen)	1
+village/building/ButcheryBuilding	isChoppingBlock(Lnet/minecraft/world/level/block/state/BlockState;)Z	BLOCK_IS	BAMBOO_BLOCK	SAFE	butcher stands at the chopping block; no property read	1
+village/building/ButcheryBuilding	isChoppingBlock(Lnet/minecraft/world/level/block/state/BlockState;)Z	BLOCK_IS	STRIPPED_BAMBOO_BLOCK	SAFE	butcher stands at the chopping block; no property read	1
+village/building/CauldronIndex	waterLevel(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;)I	BLOCK_IS	CAULDRON	UNSAFE	reads LayeredCauldronBlock.LEVEL; the farmer refills by replacing the block with a vanilla water cauldron	1
+village/building/CauldronIndex	waterLevel(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;)I	BLOCK_IS	WATER_CAULDRON	UNSAFE	reads LayeredCauldronBlock.LEVEL; the farmer refills by replacing the block with a vanilla water cauldron	1
+village/building/CauldronIndex	workTile(Lnet/minecraft/server/level/ServerLevel;Lcom/alex/test/village/building/Building;Lnet/minecraft/core/BlockPos;Lcom/alex/test/village/NavGraph;Lnet/minecraft/core/BlockPos;Ljava/util/UUID;Z)Lcom/alex/test/village/building/CauldronIndex$StandSpot;	INSTANCEOF	net/minecraft/world/level/block/AbstractCauldronBlock	UNSAFE	cauldron role unsupported (see waterLevel); here it only keeps the stand tile off cauldrons	1
+village/building/EnclosureScanner	isFenceLike(Lnet/minecraft/world/level/block/state/BlockState;)Z	INSTANCEOF	net/minecraft/world/level/block/FenceBlock	UNSAFE	structure block (doors, gates, fences, walls, stairs, ladders) for walking and room shape, not a working-block role	1
+village/building/EnclosureScanner	isFenceLike(Lnet/minecraft/world/level/block/state/BlockState;)Z	INSTANCEOF	net/minecraft/world/level/block/WallBlock	UNSAFE	structure block (doors, gates, fences, walls, stairs, ladders) for walking and room shape, not a working-block role	1
+village/building/EnclosureScanner	isFenceLike(Lnet/minecraft/world/level/block/state/BlockState;)Z	INSTANCEOF	net/minecraft/world/level/block/FenceGateBlock	UNSAFE	structure block (doors, gates, fences, walls, stairs, ladders) for walking and room shape, not a working-block role	1
+village/building/ForgeBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	INSTANCEOF	net/minecraft/world/level/block/AnvilBlock	SAFE	smith stands beside it; the FACING read in getStandBeside is skipped for stand-ins	1
+village/building/ForgeBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	INSTANCEOF	net/minecraft/world/level/block/AbstractFurnaceBlock	SAFE	smith stands at it; smelting is simulated from the smith's own inventory (no block entity access)	1
+village/building/ForgeBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	INSTANCEOF	net/minecraft/world/level/block/BlastFurnaceBlock	SAFE	preferred furnace, halves smelt time; no block entity access	1
+village/building/ForgeBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	INSTANCEOF	net/minecraft/world/level/block/SmithingTableBlock	SAFE	smith stands at it	1
+village/building/ForgeBuilding	getStandBeside(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lcom/alex/test/village/NavGraph;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/core/BlockPos;	INSTANCEOF	net/minecraft/world/level/block/AnvilBlock	UNSAFE	reads AnvilBlock.FACING without hasProperty; a stand-in fails here and gets any side instead	1
+village/building/HouseBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/building/HouseBuilding	isBedAccessibleFromRoom(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;)Z	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/building/HouseBuilding	getWalkTargetBesideBed(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lcom/alex/test/village/NavGraph;Lnet/minecraft/core/BlockPos;Ljava/util/function/Predicate;)Lnet/minecraft/core/BlockPos;	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/building/HouseBuilding	isBedOccupied(Lnet/minecraft/server/level/ServerLevel;I)Z	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/building/KitchenBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	BLOCK_IS	CRAFTING_TABLE	SAFE	cook/others stand at it (CraftingStation); no block access	1
+village/building/KitchenBuilding	heatSourceOf(Lnet/minecraft/world/level/block/state/BlockState;)Lcom/alex/test/village/building/KitchenBuilding$HeatSource;	INSTANCEOF	net/minecraft/world/level/block/SmokerBlock	SAFE	cook only stands at heat sources and never fills them (no block entity access in cook code)	1
+village/building/KitchenBuilding	heatSourceOf(Lnet/minecraft/world/level/block/state/BlockState;)Lcom/alex/test/village/building/KitchenBuilding$HeatSource;	INSTANCEOF	net/minecraft/world/level/block/BlastFurnaceBlock	SAFE	cook only stands at heat sources and never fills them (no block entity access in cook code)	1
+village/building/KitchenBuilding	heatSourceOf(Lnet/minecraft/world/level/block/state/BlockState;)Lcom/alex/test/village/building/KitchenBuilding$HeatSource;	INSTANCEOF	net/minecraft/world/level/block/AbstractFurnaceBlock	SAFE	cook only stands at heat sources and never fills them (no block entity access in cook code)	1
+village/building/KitchenBuilding	heatSourceOf(Lnet/minecraft/world/level/block/state/BlockState;)Lcom/alex/test/village/building/KitchenBuilding$HeatSource;	INSTANCEOF	net/minecraft/world/level/block/CampfireBlock	SAFE	cook only stands at heat sources and never fills them (no block entity access in cook code)	1
+village/building/LibraryBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	BLOCK_IS	BOOKSHELF	SAFE	librarian/enchanter stand or sit near it; no block access	1
+village/building/LibraryBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	BLOCK_IS	ENCHANTING_TABLE	SAFE	librarian/enchanter stand or sit near it; no block access	1
+village/building/MageTowerBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/building/MageTowerBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	BLOCK_IS	ENCHANTING_TABLE	SAFE	mage studies beside it; no block access	1
+village/building/MageTowerBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	BLOCK_IS	LECTERN	SAFE	mage studies beside it; no block access	1
+village/building/MageTowerBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	BLOCK_IS	BOOKSHELF	SAFE	mage studies beside it; no block access	1
+village/building/MageTowerBuilding	scanBed(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/building/MageTowerBuilding	isCrystal(Lnet/minecraft/world/level/block/state/BlockState;)Z	BLOCK_IS	AMETHYST_BLOCK	SAFE	crystals are counted and used as particle anchors (MageActivity.nearestTowerCrystal)	1
+village/building/MageTowerBuilding	isCrystal(Lnet/minecraft/world/level/block/state/BlockState;)Z	BLOCK_IS	BUDDING_AMETHYST	SAFE	crystals are counted and used as particle anchors (MageActivity.nearestTowerCrystal)	1
+village/building/MageTowerBuilding	isCrystal(Lnet/minecraft/world/level/block/state/BlockState;)Z	BLOCK_IS	AMETHYST_CLUSTER	SAFE	crystals are counted and used as particle anchors (MageActivity.nearestTowerCrystal)	1
+village/building/MageTowerBuilding	isCrystal(Lnet/minecraft/world/level/block/state/BlockState;)Z	BLOCK_IS	LARGE_AMETHYST_BUD	SAFE	crystals are counted and used as particle anchors (MageActivity.nearestTowerCrystal)	1
+village/building/MageTowerBuilding	isCrystal(Lnet/minecraft/world/level/block/state/BlockState;)Z	BLOCK_IS	MEDIUM_AMETHYST_BUD	SAFE	crystals are counted and used as particle anchors (MageActivity.nearestTowerCrystal)	1
+village/building/MageTowerBuilding	isCrystal(Lnet/minecraft/world/level/block/state/BlockState;)Z	BLOCK_IS	SMALL_AMETHYST_BUD	SAFE	crystals are counted and used as particle anchors (MageActivity.nearestTowerCrystal)	1
+village/building/MageTowerBuilding	getWalkTargetBesideBed(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lcom/alex/test/village/NavGraph;Lnet/minecraft/core/BlockPos;Ljava/util/function/Predicate;)Lnet/minecraft/core/BlockPos;	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/building/MerchantStallBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	BLOCK_IS	BARREL	NEEDS:container	sell barrel: SellBox reads and fills it only if its block entity is a Container	1
+village/building/MuddyCauldrons	isStale(Lnet/minecraft/world/level/block/state/BlockState;)Z	BLOCK_IS	WATER_CAULDRON	UNSAFE	negated check then reads LayeredCauldronBlock.LEVEL: a stand-in would throw	1
+village/building/RoomScanner	isDoorway(Lnet/minecraft/world/level/block/state/BlockState;)Z	INSTANCEOF	net/minecraft/world/level/block/DoorBlock	UNSAFE	structure block (doors, gates, fences, walls, stairs, ladders) for walking and room shape, not a working-block role; doors are opened through DoorBlock properties elsewhere	1
+village/building/RoomScanner	isDoorway(Lnet/minecraft/world/level/block/state/BlockState;)Z	INSTANCEOF	net/minecraft/world/level/block/FenceGateBlock	UNSAFE	structure block (doors, gates, fences, walls, stairs, ladders) for walking and room shape, not a working-block role; doors are opened through DoorBlock properties elsewhere	1
+village/building/RoomScanner	isStaircaseUnderside(Lnet/minecraft/server/level/ServerLevel;Lcom/alex/test/village/NavNode;I)Z	INSTANCEOF	net/minecraft/world/level/block/StairBlock	UNSAFE	structure block (doors, gates, fences, walls, stairs, ladders) for walking and room shape, not a working-block role; reads StairBlock.HALF	1
+village/building/RoomScanner	isConnector(Lcom/alex/test/village/NavNode;)Z	INSTANCEOF	net/minecraft/world/level/block/StairBlock	UNSAFE	structure block (doors, gates, fences, walls, stairs, ladders) for walking and room shape, not a working-block role	1
+village/building/SchoolBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	BLOCK_IS	LECTERN	SAFE	teacher stands at it; no block access	1
+village/building/StorageBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	BLOCK_IS	CRAFTING_TABLE	SAFE	crafters stand at it (CraftingStation); no block access	1
+village/building/StorageBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	BLOCK_IS	FURNACE	UNSAFE	MakeTorchesActivity (miner torch-making, not rewritten) writes LIT into the furnace state when the block has that property; TownKit never lets Towntopia write state into a stand-in	1
+village/building/StorageBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	BLOCK_IS	STONECUTTER	SAFE	builder stands at it; no block access	1
+village/building/StorageBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	BLOCK_IS	COMPOSTER	UNSAFE	the farmer fills it: FarmerCompost reads ComposterBlock.LEVEL and sets block states	1
+village/building/StorageContainers	isStorageBlock(Lnet/minecraft/world/level/block/Block;)Z	INSTANCEOF	net/minecraft/world/level/block/ChestBlock	NEEDS:inventory	Towntopia takes and puts items through its Container or item-handler capability	1
+village/building/StorageContainers	isStorageBlock(Lnet/minecraft/world/level/block/Block;)Z	INSTANCEOF	net/minecraft/world/level/block/BarrelBlock	NEEDS:inventory	Towntopia takes and puts items through its Container or item-handler capability	1
+village/building/StorageContainers	isBarrel(Lnet/minecraft/world/level/block/state/BlockState;)Z	INSTANCEOF	net/minecraft/world/level/block/BarrelBlock	NEEDS:inventory	barrel sound and UI icon only, after isStorageBlock; same check so it counts where storage counts	1
+village/building/TavernBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	BLOCK_IS	NOTE_BLOCK	SAFE	stage: bard and travelers stand near it; BardMusic reads NoteBlock.INSTRUMENT only behind hasProperty	1
+village/building/TavernBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	BLOCK_IS	JUKEBOX	SAFE	stage: bard and travelers stand near it; BardMusic reads NoteBlock.INSTRUMENT only behind hasProperty	1
+village/building/TavernBuilding	guestBeds(Lnet/minecraft/server/level/ServerLevel;)Ljava/util/List;	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/building/TownHallBuilding	scanFunctionalBlocks(Lnet/minecraft/server/level/ServerLevel;)Z	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/building/TownHallBuilding	isBedAccessibleFromRoom(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;)Z	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/building/TownHallBuilding	getWalkTargetBesideBed(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lcom/alex/test/village/NavGraph;Lnet/minecraft/core/BlockPos;Ljava/util/function/Predicate;)Lnet/minecraft/core/BlockPos;	INSTANCEOF	net/minecraft/world/level/block/BedBlock	NEEDS:bed_block	bed: Towntopia reads BED_PART/FACING or sleeps in it; only a BedBlock works (and a BedBlock passes on its own)	1
+village/building/WatchtowerBuilding	findBell(Lnet/minecraft/server/level/ServerLevel;)Lnet/minecraft/core/BlockPos;	INSTANCEOF	net/minecraft/world/level/block/BellBlock	UNSAFE	the lookout casts it to BellBlock to ring it (LookoutWatch.tickBell); counting a bell nobody can ring is wrong	1
+village/takeover/VanillaHouses	readPiece(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/level/levelgen/structure/BoundingBox;)Lcom/alex/test/village/takeover/VanillaHouses$Contents;	INSTANCEOF	net/minecraft/world/level/block/BedBlock	AUDIT_ONLY	excluded: villager takeover
+village/takeover/VanillaHouses	doorFor(Ljava/util/Map;)Lnet/minecraft/world/level/block/Block;	INSTANCEOF	net/minecraft/world/level/block/DoorBlock	AUDIT_ONLY	excluded: villager takeover
+village/takeover/VanillaHouses	countBeds(Lnet/minecraft/server/level/ServerLevel;Ljava/util/List;Ljava/util/Set;)I	INSTANCEOF	net/minecraft/world/level/block/BedBlock	AUDIT_ONLY	excluded: villager takeover
+village/takeover/VanillaHouses	isDoorBase(Lnet/minecraft/world/level/block/state/BlockState;)Z	INSTANCEOF	net/minecraft/world/level/block/DoorBlock	AUDIT_ONLY	excluded: villager takeover
+village/takeover/VanillaVillageTakeover	findRanch(Lnet/minecraft/server/level/ServerLevel;Lcom/alex/test/village/VillageManager;Lnet/minecraft/world/level/levelgen/structure/StructureStart;Lcom/alex/test/village/NavGraph;)Lcom/alex/test/village/takeover/VanillaVillageTakeover$Bonus;	INSTANCEOF	net/minecraft/world/level/block/FenceGateBlock	AUDIT_ONLY	excluded: villager takeover
+village/takeover/VanillaVillageTakeover	findRanch(Lnet/minecraft/server/level/ServerLevel;Lcom/alex/test/village/VillageManager;Lnet/minecraft/world/level/levelgen/structure/StructureStart;Lcom/alex/test/village/NavGraph;)Lcom/alex/test/village/takeover/VanillaVillageTakeover$Bonus;	INSTANCEOF	net/minecraft/world/level/block/FenceBlock	AUDIT_ONLY	excluded: villager takeover
+village/takeover/VanillaVillageTakeover	findRanch(Lnet/minecraft/server/level/ServerLevel;Lcom/alex/test/village/VillageManager;Lnet/minecraft/world/level/levelgen/structure/StructureStart;Lcom/alex/test/village/NavGraph;)Lcom/alex/test/village/takeover/VanillaVillageTakeover$Bonus;	INSTANCEOF	net/minecraft/world/level/block/WallBlock	AUDIT_ONLY	excluded: villager takeover
+village/villagers/archer/ArcherEvents	onProjectileImpact(Lnet/neoforged/neoforge/event/entity/ProjectileImpactEvent;)V	BLOCK_IS	TARGET	SAFE	scores the arrow from the hit position; no block access	1
+village/villagers/archer/behavior/ArcherPracticeRange	targetsAround(Lcom/alex/test/village/brain/Activity$Context;Lcom/alex/test/village/building/BarracksBuilding;J)Ljava/util/List;	BLOCK_IS	TARGET	SAFE	finds targets to aim at; no block access	1
+village/villagers/archer/behavior/ArcherPracticeRange	isTarget(Lcom/alex/test/village/brain/Activity$Context;Lnet/minecraft/core/BlockPos;)Z	BLOCK_IS	TARGET	SAFE	finds targets to aim at; no block access	1
+village/villagers/archer/behavior/ArcherPracticeRange	lambda$targetsAround$0(Lcom/alex/test/village/brain/Activity$Context;Lnet/minecraft/core/BlockPos;)Z	BLOCK_IS	TARGET	SAFE	finds targets to aim at; no block access	1
+village/villagers/archer/behavior/ArrowRecovery	landedInHay(Lcom/alex/test/village/brain/Activity$Context;Lnet/minecraft/world/entity/projectile/AbstractArrow;)Z	BLOCK_IS	HAY_BLOCK	SAFE	arrow landed in hay; no block access	1
+village/villagers/archer/behavior/FletchArrowsActivity	workAnimation(Lcom/alex/test/village/brain/Activity$Context;)Lcom/alex/test/animation/VillagerAnimationState;	BLOCK_IS	CRAFTING_TABLE	SAFE	table choice, animation and wording only; no block access	1
+village/villagers/archer/behavior/FletchArrowsActivity	fletchingTables(Lcom/alex/test/village/brain/Activity$Context;Lcom/alex/test/village/building/ArcheryRangeBuilding;)Ljava/util/List;	BLOCK_IS	FLETCHING_TABLE	SAFE	table choice, animation and wording only; no block access	1
+village/villagers/archer/behavior/FletchArrowsActivity	craft(Lcom/alex/test/village/brain/Activity$Context;)Z	BLOCK_IS	FLETCHING_TABLE	SAFE	table choice, animation and wording only; no block access	1
+village/villagers/archer/behavior/LookoutWatch	tickBell(Lcom/alex/test/village/brain/Activity$Context;Z)V	INSTANCEOF	net/minecraft/world/level/block/BellBlock	UNSAFE	casts to BellBlock and calls attemptToRing	1
+village/villagers/blacksmith/behavior/BlacksmithActivity$Offline	smeltTicks(I)I	INSTANCEOF	net/minecraft/world/level/block/BlastFurnaceBlock	SAFE	blast furnace halves smelt time (catch-up); no block access	1
+village/villagers/blacksmith/behavior/BlacksmithActivity	beginStationWork(Lcom/alex/test/village/brain/Activity$Context;)V	INSTANCEOF	net/minecraft/world/level/block/BlastFurnaceBlock	SAFE	blast furnace halves smelt time; no block access	1
+village/villagers/blacksmith/behavior/BlacksmithActivity	lightFurnace(Lcom/alex/test/village/brain/Activity$Context;Z)V	INSTANCEOF	net/minecraft/world/level/block/AbstractFurnaceBlock	UNSAFE	writes LIT into the block state (guarded by hasProperty); skipped so a stand-in's own state is never set	1
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	INSTANCEOF	net/minecraft/world/level/block/BedBlock	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	INSTANCEOF	net/minecraft/world/level/block/ChestBlock	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	INSTANCEOF	net/minecraft/world/level/block/BarrelBlock	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	INSTANCEOF	net/minecraft/world/level/block/AbstractFurnaceBlock	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	INSTANCEOF	net/minecraft/world/level/block/CampfireBlock	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	INSTANCEOF	net/minecraft/world/level/block/AnvilBlock	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	BLOCK_EQUALS	BOOKSHELF	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	BLOCK_EQUALS	ENCHANTING_TABLE	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	BLOCK_EQUALS	LECTERN	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	BLOCK_EQUALS	AMETHYST_BLOCK	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	BLOCK_EQUALS	AMETHYST_CLUSTER	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	BLOCK_EQUALS	LARGE_AMETHYST_BUD	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	BLOCK_EQUALS	MEDIUM_AMETHYST_BUD	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	BLOCK_EQUALS	SMALL_AMETHYST_BUD	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	BLOCK_EQUALS	NOTE_BLOCK	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	BLOCK_EQUALS	JUKEBOX	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	BLOCK_EQUALS	TARGET	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	BLOCK_EQUALS	GRINDSTONE	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	INSTANCEOF	net/minecraft/world/level/block/LadderBlock	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	INSTANCEOF	net/minecraft/world/level/block/FenceGateBlock	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	INSTANCEOF	net/minecraft/world/level/block/FenceBlock	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/builder/blueprint/BlueprintRoomGuess$Counts	add(Lnet/minecraft/world/level/block/state/BlockState;I)V	INSTANCEOF	net/minecraft/world/level/block/DoorBlock	AUDIT_ONLY	excluded: builder's blueprint guess
+village/villagers/cook/behavior/CookActivity	lightFurnace(Lcom/alex/test/village/brain/Activity$Context;Z)V	INSTANCEOF	net/minecraft/world/level/block/AbstractFurnaceBlock	UNSAFE	writes LIT into the block state (guarded by hasProperty); skipped so a stand-in's own state is never set, the cook still cooks	1
+village/villagers/cook/behavior/CookActivity	lightFurnace(Lcom/alex/test/village/brain/Activity$Context;Z)V	INSTANCEOF	net/minecraft/world/level/block/CampfireBlock	UNSAFE	writes LIT into the block state (guarded by hasProperty); skipped so a stand-in's own state is never set, the cook still cooks	1
+village/villagers/farmer/FarmerCompost	fill(Lnet/minecraft/world/level/block/state/BlockState;)I	BLOCK_IS	COMPOSTER	UNSAFE	reads ComposterBlock.LEVEL	1
+village/villagers/farmer/FarmerCompost	hopperBelow(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;)Z	BLOCK_IS	HOPPER	UNSAFE	hopper under a composter, not a building role	1
+village/villagers/farmer/FarmerCompost	lambda$findNear$2(IIIIIILnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;)Z	BLOCK_IS	COMPOSTER	UNSAFE	composter role unsupported: the farmer fills it through ComposterBlock.LEVEL	1
+village/villagers/farmer/FarmerManager	composters(Lnet/minecraft/server/level/ServerLevel;Lcom/alex/test/village/VillageManager;J)Ljava/util/Set;	BLOCK_IS	COMPOSTER	AUDIT_ONLY	farmer, not rewritten: re-checks the storage composter (composter stand-ins are UNSAFE anyway)
+village/villagers/farmer/FarmerManager	validateJob(Lnet/minecraft/server/level/ServerLevel;Lcom/alex/test/village/villagers/farmer/FarmerManager$Job;)Z	BLOCK_IS	COMPOSTER	AUDIT_ONLY	farmer, not rewritten: re-checks composters and farm soil
+village/villagers/farmer/FarmerManager	validateJob(Lnet/minecraft/server/level/ServerLevel;Lcom/alex/test/village/villagers/farmer/FarmerManager$Job;)Z	BLOCK_IS	SAND	AUDIT_ONLY	farmer, not rewritten: re-checks composters and farm soil
+village/villagers/farmer/FarmerManager	validateJob(Lnet/minecraft/server/level/ServerLevel;Lcom/alex/test/village/villagers/farmer/FarmerManager$Job;)Z	BLOCK_IS	FARMLAND	AUDIT_ONLY	farmer, not rewritten: re-checks composters and farm soil
+village/villagers/farmer/FarmerManager	validateJob(Lnet/minecraft/server/level/ServerLevel;Lcom/alex/test/village/villagers/farmer/FarmerManager$Job;)Z	BLOCK_IS	DIRT	AUDIT_ONLY	farmer, not rewritten: re-checks composters and farm soil
+village/villagers/farmer/FarmerManager	validateJob(Lnet/minecraft/server/level/ServerLevel;Lcom/alex/test/village/villagers/farmer/FarmerManager$Job;)Z	BLOCK_IS	GRASS_BLOCK	AUDIT_ONLY	farmer, not rewritten: re-checks composters and farm soil
+village/villagers/farmer/behavior/WashActivity	insideSpot(Lcom/alex/test/village/brain/Activity$Context;Lcom/alex/test/village/building/Building;)Lnet/minecraft/core/BlockPos;	INSTANCEOF	net/minecraft/world/level/block/AbstractCauldronBlock	AUDIT_ONLY	farmer, not rewritten: cauldron role is UNSAFE
+village/villagers/teacher/behavior/TeacherActivity	countShelves(Lcom/alex/test/village/brain/Activity$Context;Lcom/alex/test/village/building/SchoolBuilding;)I	BLOCK_IS	BOOKSHELF	SAFE	counts shelves for lesson quality; no block access	1
+village/villagers/tradesman/SellBox	barrels(Lnet/minecraft/server/level/ServerLevel;Lcom/alex/test/village/building/MerchantStallBuilding;)Ljava/util/List;	BLOCK_IS	BARREL	NEEDS:container	sell barrel: SellBox reads and fills it only if its block entity is a Container	1
+village/villagers/tradesman/SellBox	isSellBox(Lnet/minecraft/server/level/ServerLevel;Lcom/alex/test/village/VillageManager;Lnet/minecraft/core/BlockPos;)Z	BLOCK_IS	BARREL	NEEDS:container	sell barrel: SellBox reads and fills it only if its block entity is a Container	1
+village/villagers/tradesman/SellBoxEvents	onRightClickBlock(Lnet/neoforged/neoforge/event/entity/player/PlayerInteractEvent$RightClickBlock;)V	BLOCK_IS	BARREL	NEEDS:container	sell barrel: SellBox reads and fills it only if its block entity is a Container	1

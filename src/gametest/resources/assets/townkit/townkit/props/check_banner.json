@@ -1,0 +1,5 @@
+{
+  "geo": "townkit:geo/check_banner.geo.json",
+  "texture": "townkit:textures/entity/check_banner.png",
+  "bone": "bone2"
+}

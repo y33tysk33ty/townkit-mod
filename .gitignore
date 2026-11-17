@@ -1,0 +1,11 @@
+build/
+.gradle/
+hookgen/build/
+runs/
+logs/
+*.log
+libs/*.jar
+.idea/
+*.iml
+out/
+status.md

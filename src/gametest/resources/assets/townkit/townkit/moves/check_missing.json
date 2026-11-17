@@ -1,0 +1,4 @@
+{
+  "animation_file": "townkit:animations/townkit/no_such_file.animation.json",
+  "animation": "townkit.check_missing"
+}

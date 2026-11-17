@@ -1,0 +1,273 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+version = project.mod_version
+group = 'townkit'
+base { archivesName = 'townkit' }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+repositories {
+    // Towntopia jar lives in libs/, read-only: compiled against and read by the hook generator, never modified
+    flatDir { dirs rootProject.file('libs') }
+    maven { url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
+}
+
+def towntopiaJar = rootProject.file("libs/towntopia-${project.towntopia_version}.jar")
+def genJava = layout.buildDirectory.dir('generated/hooks/java')
+def genRes = layout.buildDirectory.dir('generated/hooks/resources')
+// the generated hook list (the public repo keeps a copy at dev-docs/hooks.md)
+def hookDoc = layout.buildDirectory.file('hooks.md').get().asFile
+
+// Reads the Towntopia jar and writes the hook mixins, mixin config, hook manifest and the hook list doc
+def generateHooks = tasks.register('generateHooks', JavaExec) {
+    group = 'townkit'
+    description = 'Generate TownKit hooks for every Towntopia method (see hookgen/hook-rules.txt)'
+    classpath = project(':hookgen').sourceSets.main.runtimeClasspath
+    mainClass = 'townkit.hookgen.HookGen'
+    def rules = project(':hookgen').file('hook-rules.txt')
+    // hook keys core uses are always generated (and the build fails if one is missing): editing core regenerates
+    def coreSrc = rootProject.file('src/main/java/townkit/core')
+    // so are the keys TownKit's own GameTests use
+    def gametestSrc = rootProject.file('src/gametest/java')
+    // owners in these tsv files that end up with no hooks become carrier targets automatically
+    def buildingSites = rootProject.file('src/main/resources/townkit/building-sites.tsv')
+    def navSites = rootProject.file('src/main/resources/townkit/nav-sites.tsv')
+    def workSites = rootProject.file('src/main/resources/townkit/work-sites.tsv')
+    inputs.file(towntopiaJar)
+    inputs.file(rules)
+    inputs.file(buildingSites)
+    inputs.file(navSites)
+    inputs.file(workSites)
+    inputs.dir(coreSrc).withPropertyName('coreSources').withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(gametestSrc).withPropertyName('gametestSources').withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(project(':hookgen').sourceSets.main.runtimeClasspath)
+    outputs.dir(genJava)
+    outputs.dir(genRes)
+    outputs.file(hookDoc)
+    def only = providers.gradleProperty('hooks.only').getOrElse('')
+    inputs.property('only', only)
+    args = [towntopiaJar.absolutePath, genJava.get().asFile.absolutePath, genRes.get().asFile.absolutePath, hookDoc.absolutePath, rules.absolutePath,
+            '--core', coreSrc.absolutePath, '--gametest', gametestSrc.absolutePath,
+            '--sites', buildingSites.absolutePath, '--sites', navSites.absolutePath, '--sites', workSites.absolutePath] +
+        (only ? ['--only', only] : [])
+}
+
+// TownKit's version and Towntopia's mod ID/version live only in gradle.properties: this class and neoforge.mods.toml are filled from them
+def buildInfoDir = layout.buildDirectory.dir('generated/buildinfo/java')
+def buildInfoProps = [version: project.mod_version, towntopiaModId: project.towntopia_modid, towntopiaVersion: project.towntopia_version]
+def generateBuildInfo = tasks.register('generateBuildInfo') {
+    group = 'townkit'
+    inputs.properties(buildInfoProps)
+    outputs.dir(buildInfoDir)
+    doLast {
+        def f = buildInfoDir.get().file('townkit/core/BuildInfo.java').asFile
+        f.parentFile.mkdirs()
+        f.text = """// GENERATED from gradle.properties by the generateBuildInfo task. Do not edit.
+package townkit.core;
+
+/** Build-time constants from gradle.properties (also used to fill META-INF/neoforge.mods.toml). */
+public final class BuildInfo {
+    /** TownKit's own version. */
+    public static final String VERSION = "${buildInfoProps.version}";
+    /** Towntopia's mod ID (dynamicvillages before 0.1.2). */
+    public static final String TOWNTOPIA_MODID = "${buildInfoProps.towntopiaModId}";
+    /** The Towntopia version TownKit's hooks are generated from; also the lowest version it accepts. */
+    public static final String TOWNTOPIA_VERSION = "${buildInfoProps.towntopiaVersion}";
+
+    private BuildInfo() {
+    }
+}
+"""
+    }
+}
+
+// GameTests, test blocks and their helpers (package townkit.test): joined to the townkit mod only in the gameTestServer
+// run, so the release jar and the client run carry no test code
+sourceSets {
+    gametest {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+    // no sources: the clientNoTownKit run's classpath is TownKit's dependencies (NeoForge, Towntopia, GeckoLib) without TownKit
+    noTownKit {
+        compileClasspath = configurations.compileClasspath
+        runtimeClasspath = configurations.runtimeClasspath
+    }
+}
+
+sourceSets.main.java.srcDir(genJava)
+sourceSets.main.java.srcDir(buildInfoDir)
+sourceSets.main.resources.srcDir(genRes)
+tasks.named('compileJava') { dependsOn generateHooks, generateBuildInfo }
+tasks.named('processResources', ProcessResources) {
+    def props = [mod_version: project.mod_version, towntopia_modid: project.towntopia_modid, towntopia_version: project.towntopia_version]
+    inputs.properties(props)
+    filesMatching('META-INF/neoforge.mods.toml') { expand(props) }
+}
+tasks.named('processResources') { dependsOn generateHooks }
+
+neoForge {
+    version = project.neo_version
+
+    parchment {
+        mappingsVersion = project.parchment_version
+        minecraftVersion = project.minecraft_version
+    }
+
+    // Two groupings of the same mod (modId townkit, from main's neoforge.mods.toml): moddev's mod names only label the
+    // folders FML loads as one mod. The client run loads main alone; the GameTest run adds the gametest source set.
+    mods {
+        townkit { sourceSet sourceSets.main }
+        townkitWithGameTests {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.gametest
+        }
+    }
+
+    runs {
+        // Dev client. -Ptownkit.verifyClientAndQuit=true checks every hook (client ones too) at the title screen, then quits
+        client {
+            client()
+            loadedMods = [neoForge.mods.townkit]
+            gameDirectory = project.file('runs/client')
+            jvmArguments.addAll('-Xms2G', '-Xmx4G')
+            def v = providers.gradleProperty('townkit.verifyClientAndQuit').getOrNull()
+            if (v != null) systemProperty 'townkit.verifyClientAndQuit', v
+        }
+        // Client check: runs one scene in a real client with nobody at the keyboard, writes client-check.json and
+        // screenshots/ in its run folder, and quits (scenes in the gametest
+        // source set, townkit.test.client.ClientCheck). ./gradlew runClientCheck -Ptownkit.clientCheck=<scene>
+        clientCheck {
+            client()
+            sourceSet = sourceSets.gametest
+            loadedMods = [neoForge.mods.townkitWithGameTests]
+            gameDirectory = project.file('runs/client-check')
+            jvmArguments.addAll('-Xms2G', '-Xmx4G')
+            def scene = providers.gradleProperty('townkit.clientCheck').getOrNull()
+            if (scene != null) systemProperty 'townkit.clientCheck', scene
+        }
+        // Headless test server: runs TownKit's GameTests and exits
+        gameTestServer {
+            type = 'gameTestServer'
+            // the GameTests and test blocks live in the gametest source set, never in the jar
+            sourceSet = sourceSets.gametest
+            loadedMods = [neoForge.mods.townkitWithGameTests]
+            // a fresh world for every test run: the GameTest server keeps its world, and old test villages get in the way
+            gameDirectory = project.file("runs/gametest/" + providers.gradleProperty('test.run').getOrElse(new Date().format('yyyyMMdd-HHmmss')))
+            // townkitwork: the 0.7.1 work tests (cook, forge, mining); -Ptest.namespaces=townkitwork runs only those
+            systemProperty 'neoforge.enabledGameTestNamespaces', providers.gradleProperty('test.namespaces').getOrElse('townkit,townkitwork')
+            systemProperty 'towntopia.testkit.headless', 'true'
+            // test-only blocks for the building GameTests (never registered in a normal game)
+            systemProperty 'townkit.testblocks', 'true'
+            // perf runs: ./gradlew runGameTestServer -Ptownkit.perf=true [-Ptownkit.hooks.enabled=false] [-Ptownkit.perf.villagers=40] [-Ptownkit.perf.census=true] [-Ptownkit.perf.noopChoice=true] [-Ptownkit.perf.standIns=true] [-Ptownkit.perf.paths=true] [-Ptownkit.perf.villageEvents=true] [-Ptownkit.perf.modules07=true] [-Ptownkit.perf.work071=true]
+            ['townkit.perf', 'townkit.perf.villagers', 'townkit.perf.census', 'townkit.perf.noopChoice', 'townkit.perf.standIns', 'townkit.perf.paths', 'townkit.perf.villageEvents', 'townkit.perf.modules07', 'townkit.perf.work071', 'townkit.hooks.enabled'].each { p ->
+                def v = providers.gradleProperty(p).getOrNull()
+                if (v != null) systemProperty p, v
+            }
+            // every test builds its own village, and Towntopia keeps each one (about 55 MB, mostly its route map) until
+            // the server stops: 4G held about 70 villages, so the suite needs more room as tests are added
+            jvmArguments.addAll('-Xms4G', '-Xmx8G')
+        }
+        // Dedicated-server check: a dev dedicated server with Towntopia and TownKit (no GameTests), in its own fresh folder
+        // (runs/server-check/<test.run>). -verbose:class lists every class the server loads, so the log shows whether any
+        // client class (net.minecraft.client, townkit.core.client) was touched: a real server has none of them.
+        serverCheck {
+            server()
+            loadedMods = [neoForge.mods.townkit]
+            gameDirectory = project.file("runs/server-check/" + providers.gradleProperty('test.run').getOrElse(new Date().format('yyyyMMdd-HHmmss')))
+            programArguments.add('--nogui')
+            jvmArguments.addAll('-Xms1G', '-Xmx3G', '-verbose:class')
+        }
+        // serverCheck with the gametest source set: -Ptownkit.openCookCheck=true opens a cook's settings window for the
+        // first player who joins (townkit.test.NoTownKitOpenCheck), for the clientNoTownKit check. Needs an addon dish
+        // data file in the world's datapacks.
+        serverCheckTests {
+            server()
+            sourceSet = sourceSets.gametest
+            loadedMods = [neoForge.mods.townkitWithGameTests]
+            gameDirectory = project.file("runs/server-check/" + providers.gradleProperty('test.run').getOrElse(new Date().format('yyyyMMdd-HHmmss')))
+            programArguments.add('--nogui')
+            jvmArguments.addAll('-Xms1G', '-Xmx3G')
+            def open = providers.gradleProperty('townkit.openCookCheck').getOrNull()
+            if (open != null) systemProperty 'townkit.openCookCheck', open
+        }
+        // A client without TownKit (Towntopia only), for joining the serverCheck server: -Pquick.join=localhost
+        clientNoTownKit {
+            client()
+            sourceSet = sourceSets.noTownKit
+            loadedMods = []
+            gameDirectory = project.file('runs/client-no-townkit')
+            jvmArguments.addAll('-Xms1G', '-Xmx3G')
+            def join = providers.gradleProperty('quick.join').getOrNull()
+            if (join != null) programArguments.addAll('--quickPlayMultiplayer', join)
+        }
+    }
+}
+
+dependencies {
+    implementation "blank:towntopia:${project.towntopia_version}"
+    implementation "software.bernie.geckolib:geckolib-neoforge-${project.minecraft_version}:${project.geckolib_version}"
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+    // thousands of generated handlers: keep compiler warnings about them quiet
+    options.compilerArgs += ['-Xlint:-options']
+}
+
+// Unit tests (API rule scans, backend, ids). hookgen has its own. They see Minecraft and Towntopia classes but never
+// start the game: anything that needs a running world is a GameTest instead.
+sourceSets.test.compileClasspath += sourceSets.main.compileClasspath
+sourceSets.test.runtimeClasspath += sourceSets.main.runtimeClasspath
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    // JarContentsTest reads the release jar: every test run builds the current jar first and re-runs when it changes
+    dependsOn 'jar'
+    inputs.files(tasks.named('jar')).withPropertyName('releaseJar').withPathSensitivity(PathSensitivity.NONE)
+}
+
+// Addons build against townkit:townkit:<version> from the local Maven repo: ./gradlew publishToMavenLocal
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+// the sources jar includes the generated hook sources and BuildInfo
+tasks.named('sourcesJar') { dependsOn generateHooks, generateBuildInfo }
+
+// TownKit's license (LGPL-3.0-only) and the GPL-3.0 text it builds on go into every jar, as META-INF/LICENSE and COPYING
+tasks.withType(Jar).configureEach {
+    from(rootProject.file('LICENSE')) { into 'META-INF' }
+    from(rootProject.file('COPYING')) { into 'META-INF' }
+}
+
+// Javadoc covers the addon-facing API only (the generated hook classes and internals are not documented)
+tasks.named('javadoc', Javadoc) {
+    include 'townkit/api/**'
+    options.encoding = 'UTF-8'
+    (options as StandardJavadocDocletOptions).addStringOption('Xdoclint:none', '-quiet')
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            groupId = 'townkit'
+            artifactId = 'townkit'
+            version = project.mod_version
+            from components.java
+        }
+    }
+    repositories {
+        mavenLocal()
+    }
+}
