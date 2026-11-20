@@ -6,12 +6,13 @@ import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nullable;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 
 /**
  * An edit of an existing dish, for {@link TownKitCooking#changeDish}: each field is optional, and a field left unset
- * keeps the dish's current value. Ingredients are one field: setting any ingredient replaces the dish's whole ingredient
- * list with the ones set here (in the order set). Made with {@link #builder}; immutable.
+ * keeps the dish's current value. Ingredients are one field: setting any ingredient (item or tag) replaces the dish's
+ * whole ingredient lists, items and tags both, with the ones set here (in the order set). Made with {@link #builder}; immutable.
  *
  * @since 0.7.1
  */
@@ -20,6 +21,10 @@ public final class DishChange {
     private final Integer output;
     @Nullable
     private final Map<Item, Integer> ingredients;
+    @Nullable
+    private final Map<TagKey<Item>, Integer> tagIngredients;
+    @Nullable
+    private final Boolean keepContainers;
     @Nullable
     private final Boolean heated;
     @Nullable
@@ -32,7 +37,10 @@ public final class DishChange {
 
     private DishChange(Builder b) {
         this.output = b.output;
-        this.ingredients = b.ingredients.isEmpty() ? null : Collections.unmodifiableMap(new LinkedHashMap<>(b.ingredients));
+        this.ingredients = b.ingredients.isEmpty() && b.tagIngredients.isEmpty() ? null : Collections.unmodifiableMap(new LinkedHashMap<>(b.ingredients));
+        this.tagIngredients = b.ingredients.isEmpty() && b.tagIngredients.isEmpty() ? null
+            : Collections.unmodifiableMap(new LinkedHashMap<>(b.tagIngredients));
+        this.keepContainers = b.keepContainers;
         this.heated = b.heated;
         this.nutrition = b.nutrition;
         this.stationSet = b.stationSet;
@@ -47,7 +55,7 @@ public final class DishChange {
 
     /** True when the change sets nothing. */
     public boolean isEmpty() {
-        return this.output == null && this.ingredients == null && this.heated == null && this.nutrition == null && !this.stationSet
+        return this.output == null && this.ingredients == null && this.keepContainers == null && this.heated == null && this.nutrition == null && !this.stationSet
             && this.stock == null;
     }
 
@@ -56,10 +64,12 @@ public final class DishChange {
         return new Dish(dish.result(),
             this.output != null ? this.output : dish.outputPerBatch(),
             this.ingredients != null ? this.ingredients : dish.ingredients(),
+            this.ingredients != null ? this.tagIngredients : dish.tagIngredients(),
             this.heated != null ? this.heated : dish.heated(),
             this.nutrition != null ? this.nutrition : dish.nutrition(),
             this.stationSet ? this.station : dish.station(),
-            this.stock != null ? this.stock : dish.stock());
+            this.stock != null ? this.stock : dish.stock(),
+            this.keepContainers != null ? this.keepContainers : dish.keepContainers());
     }
 
     /** Builds a {@link DishChange}; {@link #build()} checks the values. */
@@ -67,6 +77,9 @@ public final class DishChange {
         @Nullable
         private Integer output;
         private final Map<Item, Integer> ingredients = new LinkedHashMap<>();
+        private final Map<TagKey<Item>, Integer> tagIngredients = new LinkedHashMap<>();
+        @Nullable
+        private Boolean keepContainers;
         @Nullable
         private Boolean heated;
         @Nullable
@@ -89,6 +102,26 @@ public final class DishChange {
         /** Sets an ingredient; any ingredient set replaces the dish's whole ingredient list. */
         public Builder ingredient(Item item, int count) {
             this.ingredients.put(Objects.requireNonNull(item, "item"), count);
+            return this;
+        }
+
+        /**
+         * Sets a tag ingredient; any ingredient set (item or tag) replaces the dish's whole ingredient lists.
+         *
+         * @since 0.8.0
+         */
+        public Builder ingredient(TagKey<Item> tag, int count) {
+            this.tagIngredients.put(Objects.requireNonNull(tag, "tag"), count);
+            return this;
+        }
+
+        /**
+         * Whether a container an ingredient leaves behind is kept.
+         *
+         * @since 0.8.0
+         */
+        public Builder keepContainers(boolean keepContainers) {
+            this.keepContainers = keepContainers;
             return this;
         }
 
@@ -124,6 +157,9 @@ public final class DishChange {
             }
             if (this.stock != null && this.stock < 1) throw new IllegalArgumentException("stock must be at least 1: " + this.stock);
             for (int count : this.ingredients.values()) {
+                if (count < 1) throw new IllegalArgumentException("ingredient counts must be at least 1: " + count);
+            }
+            for (int count : this.tagIngredients.values()) {
                 if (count < 1) throw new IllegalArgumentException("ingredient counts must be at least 1: " + count);
             }
             if (this.nutrition != null && (this.nutrition < 0 || this.nutrition > Dish.MAX_NUTRITION)) {

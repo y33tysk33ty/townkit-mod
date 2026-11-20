@@ -11,7 +11,7 @@ TownKit has three kinds of tests. All need Towntopia's jar in `libs/` (see [Buil
 No game needed. They check:
 
 - **API rules**: the stable tier never uses a Towntopia class, the API never reaches into TownKit's internals, every stable type has `@since`.
-- **Contracts** of each module's core logic: events, the brain's choices and interrupts, stand-in tables, path rules, link tables and rides, shop pricing, bubbles, skins, moves, props, and every work-recipe method (`WorkApiContractTest`).
+- **Contracts** of each module's core logic: events, the brain's choices and interrupts, stand-in tables, path rules, link tables and rides, shop pricing, bubbles, skins, moves, props, every work-recipe method (`WorkApiContractTest`), and the farm module's hook names (`FarmHooksTest`).
 - **Audits** against Towntopia's jar: the building, nav and work rewrite sites still match the `.tsv` files (five building and nav audits read `libs/towntopia-0.1.2.jar` too, and are skipped without it), and every rewrite only adds code (`ForeignInjectorTest`).
 - **The release jar** holds no test classes (`JarContentsTest`).
 - **The hook generator** (`HookGenTest`).
@@ -41,7 +41,8 @@ These tests are the best working examples of each API:
 | `BubbleTests`, `BubbleStateTests` | Pop-ups, ongoing states, hides, swaps, idle thoughts, `BUBBLE_SHOWING` |
 | `SkinTests`, `LookSyncTests` | Saved and temporary skins, what reaches tracking and late-joining players |
 | `AnimationTests`, `AnimationSwapTests` | Plays, saved loops, per-owner stop, swaps, `MOVE_STARTING` |
-| `CookingTests`, `ForgeTests`, `MiningTests` | Dishes and stations, tiers, recipes and smelting, ores, settings rows, reloads |
+| `CookingTests`, `ForgeTests`, `MiningTests` | Dishes and stations, tag ingredients, containers back, tiers, recipes and smelting, ores, settings rows, reloads |
+| `FarmingTests` | The bonus tag, seeds from produce, ripe rules, use-harvest and break capture, the away catch-up |
 
 Test-only blocks and helpers live in the same source set and are never in the release jar.
 

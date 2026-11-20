@@ -78,6 +78,9 @@ public interface TownKitBackend {
     /** @since 0.7.1 */
     TownKitWorkView work();
 
+    /** @since 0.8.0 */
+    TownKitFarmView farm();
+
     /** Towntopia's context behind an addon activity's context, during a call; null outside one. */
     @Nullable
     Activity.Context unwrap(ActivityContext ctx);

@@ -222,6 +222,57 @@ class WorkSitesAuditTest {
         assertTrue(clinit >= 0 && !s.rewrite(clinit));
     }
 
+    /**
+     * W15: every {@code CookActivity$Recipe.inputsPerBatch()} call goes through the tag-variant bridge, except the made
+     * dish's bowl check (KEEP), and no method reference to it (an {@code invokedynamic} would escape the swap) is in the jar.
+     */
+    @Test
+    void everyInputsReadIsSwapped() throws Exception {
+        WorkSites s = sites();
+        List<String> wrong = new ArrayList<>();
+        int rows = 0;
+        for (int i = 0; i < s.size(); i++) {
+            if (s.kind(i) != WorkSite.Kind.INPUTS) continue;
+            rows++;
+            boolean food = s.key(i).contains("#applyProducedFoodProperties(");
+            if (food == s.rewrite(i)) wrong.add(s.key(i));
+            // the first read of each away batch chooses afresh (onBatchInputs); every other read is a plain swap
+            String bridge = s.key(i).startsWith("village/economy/away/jobs/CookAway$Shift#shortOf(")
+                ? "townkit/core/work/cook/CookVariants#onBatchInputs" : "townkit/core/work/cook/CookVariants#onInputs";
+            if (!food && !(s.bridgeOwner(i) + "#" + s.bridgeName(i)).equals(bridge)) {
+                wrong.add("bridge of " + s.key(i));
+            }
+        }
+        assertTrue(rows >= 20, "INPUTS rows: " + rows);
+        assertTrue(wrong.isEmpty(), "not as audited: " + wrong);
+        List<String> refs = new ArrayList<>();
+        try (ZipFile zip = new ZipFile(JAR.toFile())) {
+            var entries = zip.entries();
+            while (entries.hasMoreElements()) {
+                ZipEntry e = entries.nextElement();
+                if (!e.getName().startsWith(P) || !e.getName().endsWith(".class")) continue;
+                ClassNode cn = new ClassNode();
+                try (InputStream in = zip.getInputStream(e)) {
+                    new ClassReader(in).accept(cn, 0);
+                }
+                for (MethodNode m : cn.methods) {
+                    for (AbstractInsnNode in : m.instructions) {
+                        if (!(in instanceof org.objectweb.asm.tree.InvokeDynamicInsnNode indy)) continue;
+                        for (Object arg : indy.bsmArgs) {
+                            // a record's own equals/hashCode/toString read the field (H_GETFIELD), not the accessor
+                            if (arg instanceof org.objectweb.asm.Handle h && h.getName().equals("inputsPerBatch")
+                                    && h.getTag() != Opcodes.H_GETFIELD
+                                    && h.getOwner().equals(P + "village/villagers/cook/behavior/CookActivity$Recipe")) {
+                                refs.add(cn.name + "#" + m.name);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assertTrue(refs.isEmpty(), "method references to inputsPerBatch: " + refs);
+    }
+
     /** The smith's tier sites are audited and rewritten; spare materials and their reads too. */
     @Test
     void smithSitesAreRewritten() {

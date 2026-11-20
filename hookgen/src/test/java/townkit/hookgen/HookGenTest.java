@@ -233,6 +233,51 @@ class HookGenTest {
         assertNull(HookGen.trimReason(other, named(other, "encode")));
     }
 
+    /** 0.8.0 W13: the cook's two private container sites are hooked through the real rules file. */
+    @Test
+    void cookContainerSitesAreKeptByTheRealRules() throws Exception {
+        List<HookGen.Rule> rules = new java.util.ArrayList<>();
+        for (String line : java.nio.file.Files.readAllLines(java.nio.file.Path.of("hook-rules.txt"))) {
+            HookGen.Rule r = HookGen.parseRule(line);
+            if (r != null) rules.add(r);
+        }
+        ClassNode cook = emptyClass("com/alex/test/village/villagers/cook/behavior/CookActivity", Opcodes.ACC_PUBLIC, "java/lang/Object");
+        cook.methods.add(method(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC, "consumeInputs",
+            "(Lcom/alex/test/village/brain/Activity$Context;Lcom/alex/test/village/villagers/cook/behavior/CookActivity$Recipe;)Z",
+            callingBody("()Z")));
+        assertTrue(keys(cook, rules).contains("village.villagers.cook.behavior.CookActivity#consumeInputs(Activity.Context,CookActivity.Recipe)"),
+            keys(cook, rules).toString());
+        ClassNode shift = emptyClass("com/alex/test/village/economy/away/jobs/CookAway$Shift", Opcodes.ACC_PRIVATE | Opcodes.ACC_FINAL,
+            "java/lang/Object");
+        shift.methods.add(method(Opcodes.ACC_PRIVATE, "takeAll", "(Ljava/util/Map;Lcom/alex/test/village/villagers/cook/CookPlanner$Pantry;)Z",
+            callingBody("()Z")));
+        List<String> ks = keys(shift, rules);
+        assertEquals(1, ks.size(), ks.toString());
+        assertTrue(ks.get(0).startsWith("village.economy.away.jobs.CookAway$Shift#takeAll("), ks.toString());
+        // and a neighbouring private method of the same class stays trimmed
+        shift.methods.add(method(Opcodes.ACC_PRIVATE, "give", "(Lnet/minecraft/world/item/ItemStack;)V", callingBody("()V")));
+        assertEquals(1, keys(shift, rules).size());
+    }
+
+    /** 0.8.0 W13: the private "does this cook want cakes" check is hooked through the real rules file. */
+    @Test
+    void bucketNeedsWantsCakeIsKeptByTheRealRules() throws Exception {
+        List<HookGen.Rule> rules = new java.util.ArrayList<>();
+        for (String line : java.nio.file.Files.readAllLines(java.nio.file.Path.of("hook-rules.txt"))) {
+            HookGen.Rule r = HookGen.parseRule(line);
+            if (r != null) rules.add(r);
+        }
+        ClassNode needs = emptyClass("com/alex/test/village/villagers/supplies/BucketNeeds", Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL,
+            "java/lang/Object");
+        needs.methods.add(method(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC, "wantsCake", "(Lcom/alex/test/entity/NpcEntity;I)Z",
+            callingBody("()Z")));
+        needs.methods.add(method(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC, "milks", "(Lcom/alex/test/entity/NpcEntity;)Z",
+            callingBody("()Z")));
+        List<String> ks = keys(needs, rules);
+        assertEquals(1, ks.size(), ks.toString());
+        assertTrue(ks.get(0).equals("village.villagers.supplies.BucketNeeds#wantsCake(NpcEntity,int)"), ks.toString());
+    }
+
     @Test
     void keepRuleRestoresATrimmedHook() {
         HookGen.Rule keep = HookGen.parseRule("keep network.FooPacket#encode");

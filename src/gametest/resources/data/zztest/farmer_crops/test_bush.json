@@ -1,0 +1,11 @@
+{
+  "planting_item": "townkit:test_berry",
+  "crop_block": "townkit:test_bush",
+  "maturity": { "type": "towntopia:age_property" },
+  "planting": {
+    "type": "towntopia:on_soil",
+    "soil_blocks": ["#minecraft:dirt"]
+  },
+  "harvest": { "type": "towntopia:pick_keep_plant" },
+  "harvest_tool": "shears"
+}

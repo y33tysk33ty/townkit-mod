@@ -68,6 +68,14 @@ class CookOverlayTest {
     static final class TestItems implements CookOverlay.ItemIds {
         final Map<Item, ResourceLocation> ids = new HashMap<>();
         final Map<ResourceLocation, Item> byId = new HashMap<>();
+        final Map<Item, Integer> defaultNutrition = new HashMap<>();
+        /** Item tags and their members, in tag order (a tag not listed has none). */
+        final Map<net.minecraft.tags.TagKey<Item>, List<Item>> tags = new HashMap<>();
+
+        @Override
+        public List<Item> tagMembers(net.minecraft.tags.TagKey<Item> tag) {
+            return this.tags.getOrDefault(tag, List.of());
+        }
 
         Item item(String id) {
             try {
@@ -91,6 +99,11 @@ class CookOverlayTest {
         @Override
         public Item byId(ResourceLocation id) {
             return this.byId.get(id);
+        }
+
+        @Override
+        public int defaultNutrition(Item item) {
+            return this.defaultNutrition.getOrDefault(item, 0);
         }
 
         @Override
@@ -149,6 +162,43 @@ class CookOverlayTest {
     private static Optional<SettingsSchema.AllowListEntry> entry(SettingsSchema s, String id) {
         return s.findRow(CookSettingsSchema.ALLOWED_RECIPES).orElseThrow().allowListEntries().stream()
             .filter(e -> e.id().equals(id)).findFirst();
+    }
+
+    @Test
+    void nutritionZeroPlansWithItemNutrition() {
+        this.items.defaultNutrition.put(this.melon, 6);
+        this.overlay.add("a", Dish.builder(this.melon).ingredient(this.apple, 2).nutrition(0).build());
+        assertEquals(6, recipe(this.overlay.recipes(), this.melon).nutrition());
+        assertEquals(0, recipe(this.overlay.foodRecipes(), this.melon).nutrition());
+        // the food view keeps the planning recipes' other dishes as they are
+        assertSame(recipe(this.overlay.recipes(), this.bread), recipe(this.overlay.foodRecipes(), this.bread));
+        // a food-view recipe is not a live planning recipe, and not a stale one
+        CookActivity.Recipe food = recipe(this.overlay.foodRecipes(), this.melon);
+        assertFalse(this.overlay.isLive(food));
+        assertFalse(this.overlay.isStale(food));
+        assertSame(food, recipe(this.overlay.foodRecipesFor(this.towntopia), this.melon));
+    }
+
+    @Test
+    void nutritionZeroNonFoodIsZeroInBoth() {
+        this.overlay.add("a", Dish.builder(this.melon).ingredient(this.apple, 2).nutrition(0).build());
+        assertEquals(0, recipe(this.overlay.recipes(), this.melon).nutrition());
+        assertEquals(0, recipe(this.overlay.foodRecipes(), this.melon).nutrition());
+        assertSame(recipe(this.overlay.recipes(), this.melon), recipe(this.overlay.foodRecipes(), this.melon));
+    }
+
+    @Test
+    void positiveNutritionSameInBoth() {
+        this.items.defaultNutrition.put(this.melon, 6);
+        this.overlay.add("a", melonDish(false));
+        assertEquals(8, recipe(this.overlay.recipes(), this.melon).nutrition());
+        assertEquals(8, recipe(this.overlay.foodRecipes(), this.melon).nutrition());
+    }
+
+    @Test
+    void untouchedTableFoodViewIsTowntopias() {
+        assertSame(this.towntopia, this.overlay.foodRecipes());
+        assertSame(this.towntopia, this.overlay.foodRecipesFor(this.towntopia));
     }
 
     @Test
@@ -238,6 +288,25 @@ class CookOverlayTest {
         assertEquals(Set.of(this.wheat, this.apple, this.sugar), this.overlay.ingredients());
         cakeGone.remove();
         assertEquals(Set.of(this.wheat, this.sugar, this.egg, this.milk, this.apple), this.overlay.ingredients());
+    }
+
+    @Test
+    void tagDishesWithAnEmptyTagAreLeftOut() {
+        // a tag with no members gives no variant: the dish never reaches Towntopia (a recipe with missing inputs)
+        net.minecraft.tags.TagKey<Item> milks = net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM,
+            ResourceLocation.parse("c:milks"));
+        this.overlay.add("a", Dish.builder(this.melon).ingredient(this.apple, 1).ingredient(milks, 1).build());
+        this.overlay.add("a", Dish.builder(this.milk).ingredient(milks, 1).build());
+        assertNull(recipe(this.overlay.recipes(), this.melon));
+        assertNull(recipe(this.overlay.foodRecipes(), this.melon));
+        assertFalse(this.overlay.isDish(this.melon));
+        assertFalse(this.overlay.isDish(this.milk));
+        assertTrue(this.overlay.isDish(this.cake));
+        assertFalse(this.overlay.ingredients().contains(this.apple));
+        assertNotNull(recipe(this.overlay.recipes(), this.bread)); // item-only dishes as before
+        // an item-only dish beside it behaves as in 0.7.1
+        this.overlay.add("b", Dish.builder(this.egg).ingredient(this.sugar, 1).build());
+        assertNotNull(recipe(this.overlay.recipes(), this.egg));
     }
 
     @Test

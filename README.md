@@ -2,13 +2,13 @@
 
 **TownKit is the library mod for Towntopia addons** (Minecraft 1.21.1, NeoForge, mod id `townkit`).
 
-Towntopia makes villages come alive. TownKit lets other mods change those villages, including what villagers do, what counts as a building, how villagers travel, the Mayor's shop, mood bubbles, skins, animations, and what the cook, blacksmith and miner make. Addons get this without touching Towntopia's code themselves. TownKit holds every change to Towntopia's code in one place, so when Towntopia updates, it gets fixed once, in TownKit, instead of in every addon.
+Towntopia makes villages come alive. TownKit lets other mods change those villages, including what villagers do, what counts as a building, how villagers travel, the Mayor's shop, mood bubbles, skins, animations, what the cook, blacksmith and miner make, and how the farmer grows and harvests. Addons get this without touching Towntopia's code themselves. TownKit holds every change to Towntopia's code in one place, so when Towntopia updates, it gets fixed once, in TownKit, instead of in every addon.
 
 On its own TownKit changes almost nothing in your game.
 
 ## For players
 
-- **You need:** Minecraft 1.21.1, NeoForge 21.1.238 or newer, Towntopia 0.1.3 or newer (TownKit 0.7.2), and GeckoLib.
+- **You need:** Minecraft 1.21.1, NeoForge 21.1.238 or newer, Towntopia 0.1.3 or newer (TownKit 0.8.0), and GeckoLib.
 - **Install:** put the jar in your `mods` folder, on the server and on each player's game.
 - **Read more:** the [player guide](docs/README.md) covers installing, what changes in your game, commands, settings, compatibility and an FAQ.
 
@@ -27,7 +27,8 @@ TownKit gives you a **stable API** in its own types, so your addon never touches
 | [Mood icons](dev-docs/mood-icons.md) | Your own bubble icons, pop-ups, ongoing states, hide or swap Towntopia's |
 | [Skins and looks](dev-docs/skins-and-looks.md) | Whole looks from data files, skins for single villagers |
 | [Animations and props](dev-docs/animations-and-props.md) | Play and loop moves, replace Towntopia's moves, draw props on bones |
-| [Work recipes](dev-docs/work-recipes.md) | Dishes and cook stations, smith materials, tiers, recipes and smelting, miner ores, from Java or data files |
+| [Work recipes](dev-docs/work-recipes.md) | Dishes and cook stations (with "any of" tag ingredients, the item's own food values, containers given back), smith materials, tiers, recipes and smelting, miner ores, from Java or data files |
+| [Farming](dev-docs/farming.md) | Harvest rules (when a crop is ripe, picking by right-click so the plant stays), seeds made from produce, the farmer's bonus produce |
 
 Plus an **experimental** tier of raw hooks on almost 8,000 Towntopia methods ([experimental hooks](dev-docs/experimental-hooks.md)), performance tracking per addon and per hook, and safety nets: a version check, per-class kill switches, and isolated listener errors.
 

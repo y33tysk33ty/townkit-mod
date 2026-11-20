@@ -163,8 +163,8 @@ neoForge {
             systemProperty 'towntopia.testkit.headless', 'true'
             // test-only blocks for the building GameTests (never registered in a normal game)
             systemProperty 'townkit.testblocks', 'true'
-            // perf runs: ./gradlew runGameTestServer -Ptownkit.perf=true [-Ptownkit.hooks.enabled=false] [-Ptownkit.perf.villagers=40] [-Ptownkit.perf.census=true] [-Ptownkit.perf.noopChoice=true] [-Ptownkit.perf.standIns=true] [-Ptownkit.perf.paths=true] [-Ptownkit.perf.villageEvents=true] [-Ptownkit.perf.modules07=true] [-Ptownkit.perf.work071=true]
-            ['townkit.perf', 'townkit.perf.villagers', 'townkit.perf.census', 'townkit.perf.noopChoice', 'townkit.perf.standIns', 'townkit.perf.paths', 'townkit.perf.villageEvents', 'townkit.perf.modules07', 'townkit.perf.work071', 'townkit.hooks.enabled'].each { p ->
+            // perf runs: ./gradlew runGameTestServer -Ptownkit.perf=true [-Ptownkit.hooks.enabled=false] [-Ptownkit.perf.villagers=40] [-Ptownkit.perf.census=true] [-Ptownkit.perf.noopChoice=true] [-Ptownkit.perf.standIns=true] [-Ptownkit.perf.paths=true] [-Ptownkit.perf.villageEvents=true] [-Ptownkit.perf.modules07=true] [-Ptownkit.perf.work071=true] [-Ptownkit.perf.modules08=true]
+            ['townkit.perf', 'townkit.perf.villagers', 'townkit.perf.census', 'townkit.perf.noopChoice', 'townkit.perf.standIns', 'townkit.perf.paths', 'townkit.perf.villageEvents', 'townkit.perf.modules07', 'townkit.perf.work071', 'townkit.perf.modules08', 'townkit.hooks.enabled'].each { p ->
                 def v = providers.gradleProperty(p).getOrNull()
                 if (v != null) systemProperty p, v
             }

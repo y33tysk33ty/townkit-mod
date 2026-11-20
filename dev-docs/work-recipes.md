@@ -40,7 +40,7 @@ TownKitMining.ore("mymod", OreEntry.builder(id("tin"), MyBlocks.TIN_ORE.get())
 
 ## Ingredients
 
-TownKit only changes what the cook, smith and miner do with what the village has. It never makes anyone grow, mine or craft your dish's ingredients. The cook uses the village's storage and its own pack, as for Towntopia's dishes. A crop Towntopia's farmer doesn't grow needs Towntopia's own `farmer_crops` data.
+TownKit only changes what the cook, smith and miner do with what the village has. It never makes anyone grow, mine or craft your dish's ingredients. The cook uses the village's storage and its own pack, as for Towntopia's dishes. A crop Towntopia's farmer doesn't grow needs Towntopia's own `farmer_crops` data; [Farming](farming.md) covers how to help the farmer pick and replant it.
 
 ## Cook
 
@@ -52,7 +52,7 @@ TownKit only changes what the cook, smith and miner do with what the village has
 | `station(owner, id, CookStation)`, `removeStation(owner, id)` | Cook stations (below) |
 | `dishes()` | The merged list |
 
-`Dish.builder(result)` then `output(n)` (per batch, default 1), `ingredient(item, count)` (at least one), `heated(bool)` (cooked on a heat source rather than at a crafting table, default false), `nutrition(0-20)` (0 keeps the item's own, default 5), `station(id)`, `stock(n)` (default stock target, at least 1, default 16). `DishChange.builder()` has the same methods; it sets only what you call.
+`Dish.builder(result)` then `output(n)` (per batch, default 1), `ingredient(item, count)` and `ingredient(tag, count)` (at least one of either), `keepContainers(bool)` (0.8.0), `heated(bool)` (cooked on a heat source rather than at a crafting table, default false), `nutrition(0-20)` (0 keeps the item's own food and plans with its own nutrition, default 5), `station(id)`, `stock(n)` (default stock target, at least 1, default 16). `DishChange.builder()` has the same methods; it sets only what you call.
 
 - Towntopia has 18 dishes. You can change or remove them, or another addon's.
 - Towntopia reads the merged list everywhere it reads its own: the cook's planning and batches, the Mayor's stock orders, the storage menu, the away catch-up, the farmer's compost and the builder's crafting.
@@ -69,6 +69,37 @@ Stations are "for show": TownKit never runs the machine.
 - A dish names a station by id (`Dish.Builder.station`). The cook makes it only while one of the village's kitchens holds a block of the station, walks there, and works there with a crafting table's batch timing.
 - Your `StationHandler` gets `started(ctx)` and `stopped(ctx)` callbacks (`stopped` exactly once per `started`) for visuals. `StationContext` gives the level, the station's position, the cook and the dish.
 - A station dish ignores `heated`.
+
+### Modded food (0.8.0)
+
+Four additions for modded food, all `@since 0.8.0`. A dish that doesn't use them behaves as before.
+
+**Own food values.** `nutrition(0)` keeps the item's own food (effects, saturation, eating time). The cook now also plans with the item's own nutrition (0 if it has none), so the food counts in the days of food she keeps instead of counting as worth nothing.
+
+**Tag ingredients.** `Dish.Builder.ingredient(TagKey<Item>, count)` (data: a key starting with `#` in `"ingredients"`) takes `count` of any item in the tag.
+
+- The cook uses whichever member the village has most of, so one crop's stock isn't drained while another sits in storage.
+- One batch is always one member: she never mixes members inside a batch. A batch she has started keeps its member until it ends; other cooks choose for themselves.
+- A dish with tags is expanded to the product of its tags' members, at most 8 variants per dish (more are cut, logged once). Variants are rebuilt when tags reload.
+- Towntopia still sees one recipe per dish, so it counts the dish once. Reads that have no village (the Mayor's stock orders) see the first variant, so such an order fails like one without ingredients.
+- A tag's members count as the dish's ingredients: the farmer never composts them and the builder never crafts with them. Use narrow tags: every member of the tag becomes a cook ingredient, so a broad tag (all crops, say) takes all its members out of the farmer's and builder's hands.
+
+**Containers back.** `Dish.Builder.keepContainers(true)` (data `"keep_containers": true`; also on `DishChange.Builder`).
+
+- Each consumed ingredient with a crafting remainder (a milk bucket, a honey bottle) gives it back: into the cook's pack at the end of her tick, into the away pantry in the away catch-up. A full pack sends the item to Towntopia's item loss log as for any overflow; it is never deleted.
+- Towntopia's own cake still uses up three milk buckets and gives none back. An addon can opt it in with `changeDish(owner, Items.CAKE, DishChange.builder().keepContainers(true).build())`.
+- The item tag `townkit:meal_returns_remainder` (empty by default; fill it in a data pack) makes a tagged meal hand its crafting remainder (a stew's bowl) back when a villager finishes eating it.
+- **Milk on demand:** when the cook may make a dish other than the cake that takes `minecraft:milk_bucket` (in any variant), its stock row is above 0 and the dish itself, as stored, is fewer than that row (Towntopia's own cake rule: it compares the stored dishes with the stock row, not the buckets), Towntopia's rancher counts it like the cake when she decides how much to milk. Towntopia's cap of 6 buckets stays.
+
+```java
+// any 2 items of an egg tag and a bucket of milk make 2 puddings; the bucket comes back
+TownKitCooking.addDish("mymod", Dish.builder(MyItems.PUDDING.get()).output(2)
+        .ingredient(MyTags.EGGS, 2).ingredient(Items.MILK_BUCKET, 1).keepContainers(true).nutrition(0).build());
+```
+
+```json
+{"action": "add", "result": "mymod:pudding", "output": 2, "ingredients": {"#mymod:eggs": 2, "minecraft:milk_bucket": 1}, "nutrition": 0, "keep_containers": true}
+```
 
 ## Blacksmith
 
@@ -129,7 +160,7 @@ Stations are "for show": TownKit never runs the machine.
 | `smelting` | `{"action":"add","raw":"mymod:raw_tin","result":"mymod:tin_ingot"}` |
 | `ores` | `{"action":"add","id":"mymod:tin","stone":"mymod:tin_ore","deepslate":"mymod:deepslate_tin_ore","depths":[0,64],"lucky_rolls":{"weight":6.0,"low":0,"high":64}}` (`druid` has the same shape as `lucky_rolls`) |
 
-- `cook_dishes`: an add needs `result` and `ingredients`; the rest default as in `Dish.builder`. Ingredients in a change replace the whole list; `"station":null` takes the station away.
+- `cook_dishes`: an add needs `result` and `ingredients` (a key starting with `#` is an item tag); `keep_containers` is true or false; the rest default as in `Dish.builder`. Ingredients in a change replace the whole list; `"station":null` takes the station away.
 - Materials, tiers, stations and ores are removed by `"id"`; dishes and recipes by `"result"`; smelting by `"raw"`.
 - An unknown item, a count, output or stock below 1, a number that isn't whole, or a nutrition outside 0 to 20 skips the entry with one log line.
 
@@ -139,4 +170,4 @@ Players who have TownKit see addon dishes and ores in the cook's and miner's set
 
 ## Tests to read
 
-`CookingTests`, `ForgeTests` and `MiningTests` (in game), and `WorkApiContractTest` (unit: every stable method and value type).
+`CookingTests`, `ForgeTests` and `MiningTests` (in game; `CookingTests` also covers the 0.8.0 additions), and `WorkApiContractTest` (unit: every stable method and value type).

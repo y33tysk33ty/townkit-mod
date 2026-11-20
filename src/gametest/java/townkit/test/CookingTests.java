@@ -11,6 +11,7 @@ import com.alex.test.village.VillageManager;
 import com.alex.test.village.VillageManagerRegistry;
 import com.alex.test.village.VillagerModel;
 import com.alex.test.village.brain.Activity;
+import com.alex.test.village.brain.MealLeftovers;
 import com.alex.test.village.building.Building;
 import com.alex.test.village.building.KitchenBuilding;
 import com.alex.test.village.building.StorageBuilding;
@@ -26,6 +27,7 @@ import com.alex.test.village.villagers.core.Profession;
 import com.alex.test.village.villagers.settings.ProfessionSettings;
 import com.alex.test.village.villagers.settings.SettingsSchema;
 import com.alex.test.village.villagers.settings.SettingsSchemaRegistry;
+import com.alex.test.village.villagers.supplies.BucketNeeds;
 import com.alex.test.village.villagers.tradesman.TradesmanLedger;
 import com.mojang.authlib.GameProfile;
 import io.netty.buffer.Unpooled;
@@ -56,6 +58,7 @@ import net.minecraft.gametest.framework.GameTestRunner;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -594,6 +597,54 @@ public final class CookingTests {
         });
     }
 
+    /**
+     * A dish with nutrition 0 keeps the item's own food values (nutrition 4 and an effect): the cook plans with the item's
+     * nutrition, so the village's food days count the stored meal, and the made stack still has its effect.
+     */
+    @GameTest(template = "empty", timeoutTicks = 9000, batch = "townkit_cook_keep_own")
+    public static void keepOwnFoodKeepsEffect(GameTestHelper helper) {
+        scene(helper, "keepOwnFoodKeepsEffect", s -> {
+            Item meal = TestBlocks.TEST_MEAL.get();
+            s.subs.add(TownKitCooking.addDish(OWNER, Dish.builder(meal).ingredient(Items.CLAY_BALL, 2).ingredient(Items.SUGAR, 1)
+                .nutrition(0).build()));
+            if (endIfHooksOff(s, meal)) return;
+            CookActivity.Recipe planned = recipe(meal);
+            s.c.check("the cook plans with the item's nutrition (4)", planned != null && planned.nutrition() == 4,
+                planned == null ? "none" : planned.nutrition());
+            allowOnly(s.cook, meal);
+            stock(s, Items.CLAY_BALL, 40);
+            stock(s, Items.SUGAR, 20);
+            BuildingTests.waitFor(helper, 20, 8000, s.fed(() -> s.batches(meal) > 0 && stored(s, meal) > 0), () -> {
+                s.c.check("the cook made the dish", s.batches(meal) > 0, s.batches);
+                s.c.check("the dish is in storage", stored(s, meal) > 0, stored(s, meal) + " stored");
+                FoodProperties food = foodStored(s, meal);
+                s.c.check("the made dish keeps the item's own food values", food != null && food.nutrition() == 4
+                    && !food.effects().isEmpty(), food == null ? "no food component" : food.nutrition() + ", " + food.effects().size() + " effects");
+                // only the meal in the village's stores: its days of food come from the item's own nutrition
+                clearStorage(s.level, s.v.mgr());
+                stock(s, meal, 3);
+                double days = new CookPlanner.Pantry(new java.util.HashMap<>(Map.of(meal, 3))).forVillage(s.v.mgr()).foodDays();
+                s.c.check("the stored meal counts as food (foodDays above 0)", days > 0, days);
+                s.end();
+            });
+        });
+    }
+
+    /** The food values of the first stored stack of {@code item}, or null. */
+    @Nullable
+    private static FoodProperties foodStored(Scene s, Item item) {
+        for (Building b : s.v.mgr().getBuildings()) {
+            if (!(b instanceof StorageBuilding st) || !st.isValid()) continue;
+            for (StorageInventory inv : st.inventories(s.level)) {
+                for (int i = 0; i < inv.size(); i++) {
+                    ItemStack in = inv.peek(i);
+                    if (in.is(item)) return in.get(DataComponents.FOOD);
+                }
+            }
+        }
+        return null;
+    }
+
     /** The nutrition of the first stored stack of {@code item}, or -1. */
     private static int foodOfStored(Scene s, Item item) {
         for (Building b : s.v.mgr().getBuildings()) {
@@ -911,6 +962,160 @@ public final class CookingTests {
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    // --- tag ingredients (W15) ----------------------------------------------------------------------------------------
+
+    private static final net.minecraft.tags.TagKey<Item> TEST_VEG = net.minecraft.tags.TagKey.create(
+        net.minecraft.core.registries.Registries.ITEM, ResourceLocation.fromNamespaceAndPath(TownKit.MODID, "test_veg"));
+
+    /** {@code veg} of any {@code #townkit:test_veg} (test data: veg a and b) + 1 sugar -> 1 melon slice. */
+    private static Dish vegMelon(int veg) {
+        return Dish.builder(Items.MELON_SLICE).ingredient(TEST_VEG, veg).ingredient(Items.SUGAR, 1).nutrition(8).build();
+    }
+
+    /** The item tags as bound now (to bind them again after a test changed one). */
+    private static Map<net.minecraft.tags.TagKey<Item>, List<net.minecraft.core.Holder<Item>>> itemTags() {
+        Map<net.minecraft.tags.TagKey<Item>, List<net.minecraft.core.Holder<Item>>> out = new java.util.HashMap<>();
+        BuiltInRegistries.ITEM.getTags().forEach(p -> out.put(p.getFirst(), p.getSecond().stream().toList()));
+        return out;
+    }
+
+    /** What the tag-reload listener does after the server's tags were bound again. */
+    private static void tagsReloaded() {
+        CookOverlay.GLOBAL.tagsChanged();
+        CookHooks.refresh();
+    }
+
+    /** Storage holds only veg b: the cook makes the meal from b (live and in the away catch-up's preview). */
+    @GameTest(template = "empty", timeoutTicks = 9000, batch = "townkit_cook_tag_storage")
+    public static void tagDishUsesWhatStorageHas(GameTestHelper helper) {
+        scene(helper, "tagDishUsesWhatStorageHas", s -> {
+            Item a = TestBlocks.TEST_VEG_A.get();
+            Item b = TestBlocks.TEST_VEG_B.get();
+            s.subs.add(TownKitCooking.addDish(OWNER, vegMelon(2)));
+            if (endIfHooksOff(s, Items.MELON_SLICE)) return;
+            CookActivity.Recipe r = recipe(Items.MELON_SLICE);
+            s.c.check("one recipe for the tag dish, its inputs the first variant (veg a)", r != null
+                && r.inputsPerBatch().equals(Map.of(a, 2, Items.SUGAR, 1)), r == null ? "none" : r.inputsPerBatch());
+            s.c.check("both members are cook ingredients", CookOverlay.GLOBAL.ingredients().containsAll(List.of(a, b)), "");
+            allowOnly(s.cook, Items.MELON_SLICE);
+            stock(s, b, 8);
+            stock(s, Items.SUGAR, 4);
+            helper.runAfterDelay(20, () -> {
+                Map<Item, Integer> away = awayPreview(s);
+                s.c.check("away: the meal is made from b", away.getOrDefault(Items.MELON_SLICE, 0) > 0, away);
+                BuildingTests.waitFor(helper, 20, 8000, s.fed(() -> s.batches(Items.MELON_SLICE) > 0), () -> {
+                    s.c.check("the cook made the meal", s.batches(Items.MELON_SLICE) > 0, s.batches);
+                    s.c.check("from b", total(s, b) <= 8 - 2 * s.batches(Items.MELON_SLICE),
+                        total(s, b) + " b left after " + s.batches(Items.MELON_SLICE) + " batches");
+                    s.c.check("no a appeared or went", total(s, a) == 0, total(s, a));
+                    s.end();
+                });
+            });
+        });
+    }
+
+    /** a=2, b=10, both enough for a batch: the cook uses b, the one the village has most of. */
+    @GameTest(template = "empty", timeoutTicks = 9000, batch = "townkit_cook_tag_most")
+    public static void tagDishPrefersMostStocked(GameTestHelper helper) {
+        scene(helper, "tagDishPrefersMostStocked", s -> {
+            Item a = TestBlocks.TEST_VEG_A.get();
+            Item b = TestBlocks.TEST_VEG_B.get();
+            s.subs.add(TownKitCooking.addDish(OWNER, vegMelon(2)));
+            if (endIfHooksOff(s, Items.MELON_SLICE)) return;
+            allowOnly(s.cook, Items.MELON_SLICE);
+            stock(s, a, 2);
+            stock(s, b, 10);
+            stock(s, Items.SUGAR, 1);
+            BuildingTests.waitFor(helper, 20, 8000, s.fed(() -> s.batches(Items.MELON_SLICE) > 0), () -> {
+                s.c.check("the cook made the meal", s.batches(Items.MELON_SLICE) == 1, s.batches);
+                s.c.check("b was used", total(s, b) == 8, total(s, b));
+                s.c.check("a was left alone", total(s, a) == 2, total(s, a));
+                s.end();
+            });
+        });
+    }
+
+    /** A tag reload adds veg c to the tag: with only c in storage, the meal is made from c. */
+    @GameTest(template = "empty", timeoutTicks = 9000, batch = "townkit_cook_tag_reload")
+    public static void tagReloadAddsVariant(GameTestHelper helper) {
+        scene(helper, "tagReloadAddsVariant", s -> {
+            Item c = TestBlocks.TEST_VEG_C.get();
+            s.subs.add(TownKitCooking.addDish(OWNER, vegMelon(2)));
+            if (endIfHooksOff(s, Items.MELON_SLICE)) return;
+            Map<net.minecraft.tags.TagKey<Item>, List<net.minecraft.core.Holder<Item>>> before = itemTags();
+            s.undo.add(() -> {
+                BuiltInRegistries.ITEM.bindTags(before);
+                tagsReloaded();
+            });
+            Map<net.minecraft.tags.TagKey<Item>, List<net.minecraft.core.Holder<Item>>> with = new java.util.HashMap<>(before);
+            List<net.minecraft.core.Holder<Item>> veg = new ArrayList<>(with.getOrDefault(TEST_VEG, List.of()));
+            veg.add(BuiltInRegistries.ITEM.wrapAsHolder(c));
+            with.put(TEST_VEG, veg);
+            CookActivity.Recipe old = recipe(Items.MELON_SLICE);
+            BuiltInRegistries.ITEM.bindTags(with);
+            tagsReloaded();
+            s.c.check("the tag now holds c", c.builtInRegistryHolder().is(TEST_VEG), "");
+            s.c.check("the dish's recipe was renewed (its variants changed)", recipe(Items.MELON_SLICE) != old, "");
+            s.c.check("c is a cook ingredient", CookOverlay.GLOBAL.ingredients().contains(c), "");
+            allowOnly(s.cook, Items.MELON_SLICE);
+            stock(s, c, 2);
+            stock(s, Items.SUGAR, 1);
+            BuildingTests.waitFor(helper, 20, 8000, s.fed(() -> s.batches(Items.MELON_SLICE) > 0), () -> {
+                s.c.check("the cook made the meal", s.batches(Items.MELON_SLICE) == 1, s.batches);
+                s.c.check("from c", total(s, c) == 0, total(s, c));
+                s.end();
+            });
+        });
+    }
+
+    /**
+     * A reload changes the tag dish while the cook is mid-batch on it (with veg b). The batch ends
+     * without making it, and the b and sugar she carries stay (nothing consumed for a wrong variant).
+     */
+    @GameTest(template = "empty", timeoutTicks = 6000, batch = "townkit_cook_tag_reload_mid")
+    public static void reloadMidBatchNoWrongConsume(GameTestHelper helper) {
+        scene(helper, "reloadMidBatchNoWrongConsume", s -> {
+            Item b = TestBlocks.TEST_VEG_B.get();
+            String file = "data file " + NAMESPACE + ":test_veg_melon";
+            CookOverlay.GLOBAL.table().setFileChanges(List.of(WorkChange.add(file, Items.MELON_SLICE, vegMelon(2))));
+            s.files = true;
+            CookHooks.refresh();
+            if (endIfHooksOff(s, Items.MELON_SLICE)) return;
+            AtomicReference<CookActivity> activity = new AtomicReference<>();
+            s.hooks.add(TownKitHooks.before(OWNER, K_COOK_TICK, call -> {
+                if (call.args()[0] instanceof Activity.Context ctx && ctx.npc().getNpcId().equals(s.v.cookId())
+                        && call.self() instanceof CookActivity act) {
+                    activity.set(act);
+                }
+            }));
+            allowOnly(s.cook, Items.MELON_SLICE);
+            stock(s, b, 2);
+            stock(s, Items.SUGAR, 1);
+            BuildingTests.waitFor(helper, 1, 5000, s.fed(() -> onMelon(activity.get())), () -> {
+                if (!onMelon(activity.get())) {
+                    s.c.check("the cook started a meal batch", false, s.batches);
+                    s.end();
+                    return;
+                }
+                BuildingTests.ErrorCounter errors = BuildingTests.ErrorCounter.attach();
+                // the reload: the dish now needs 3 of the tag
+                CookOverlay.GLOBAL.table().setFileChanges(List.of(WorkChange.add(file, Items.MELON_SLICE, vegMelon(3))));
+                CookHooks.refresh();
+                helper.runAfterDelay(300, () -> {
+                    errors.detach();
+                    s.c.check("no meal made from the stale recipe", s.batches(Items.MELON_SLICE) == 0
+                        && total(s, Items.MELON_SLICE) == 0, s.batches);
+                    s.c.check("the b is still there", total(s, b) == 2, total(s, b));
+                    s.c.check("the sugar is still there", total(s, Items.SUGAR) == 1, total(s, Items.SUGAR));
+                    CookActivity act = activity.get();
+                    s.c.check("the batch ended", act == null || !onMelon(act), "");
+                    s.c.check("nothing logged as an error", errors.count.get() == 0, errors.first);
+                    s.end();
+                });
+            });
+        });
     }
 
     /**
@@ -1542,8 +1747,8 @@ public final class CookingTests {
         c.check("the settings registry has Towntopia's schema",
             SettingsSchemaRegistry.forProfession(Profession.COOK).orElse(null) == CookSettingsSchema.SCHEMA, "");
         // the batch guards (doTick, doStop) stay once an earlier test changed the list or had a station dish
-        c.check("no schema, candidate or station hook attached", CookHooks.attachedKeys().stream()
-            .allMatch(k -> k.contains("#doTick(") || k.contains("#doStop(")), CookHooks.attachedKeys());
+        c.check("no schema, candidate or station hook attached (the test data tags a bowl meal: its container hook is on)", CookHooks.attachedKeys().stream()
+            .allMatch(k -> k.contains("#doTick(") || k.contains("#doStop(") || k.equals(CookHooks.CONTAINER_OF)), CookHooks.attachedKeys());
         boolean dishesOk = own.stream().allMatch(r -> CookActivity.isDish(new ItemStack(r.result())))
             && !CookActivity.isDish(new ItemStack(Items.MELON_SLICE));
         c.check("isDish answers Towntopia's set", dishesOk, "");
@@ -1575,5 +1780,223 @@ public final class CookingTests {
             sub.remove();
         }
         c.finish(helper);
+    }
+
+    // --- containers back (W13) ---------------------------------------------------------------------------------------
+
+    /** 1 milk bucket + 1 sugar -> 1 melon slice; {@code keep}: the empty bucket comes back. */
+    private static Dish milkMelon(boolean keep) {
+        return Dish.builder(Items.MELON_SLICE).ingredient(Items.MILK_BUCKET, 1).ingredient(Items.SUGAR, 1).nutrition(8)
+            .keepContainers(keep).build();
+    }
+
+    /** A keep-containers dish: the cook's pack gains the empty bucket once the batch used the milk bucket. */
+    @GameTest(template = "empty", timeoutTicks = 9000, batch = "townkit_cook_keep")
+    public static void keepContainersReturnsBucket(GameTestHelper helper) {
+        scene(helper, "keepContainersReturnsBucket", s -> {
+            s.subs.add(TownKitCooking.addDish(OWNER, milkMelon(true)));
+            if (endIfHooksOff(s, Items.MELON_SLICE)) return;
+            allowOnly(s.cook, Items.MELON_SLICE);
+            stock(s, Items.MILK_BUCKET, 1);
+            stock(s, Items.SUGAR, 1);
+            BuildingTests.waitFor(helper, 1, 8000, s.fed(() -> s.batches(Items.MELON_SLICE) > 0), () -> {
+                s.c.check("the cook made the dish", s.batches(Items.MELON_SLICE) == 1, s.batches);
+                s.c.check("the milk bucket was used", total(s, Items.MILK_BUCKET) == 0, total(s, Items.MILK_BUCKET));
+                s.c.check("the empty bucket is in the cook's pack", carried(s.cook, Items.BUCKET) == 1,
+                    carried(s.cook, Items.BUCKET) + " in the pack, " + stored(s, Items.BUCKET) + " stored");
+                s.end();
+            });
+        });
+    }
+
+    /** The same dish without the flag: Towntopia's cook uses the milk bucket up, no bucket appears. */
+    @GameTest(template = "empty", timeoutTicks = 9000, batch = "townkit_cook_keep_off")
+    public static void noFlagNoBucket(GameTestHelper helper) {
+        scene(helper, "noFlagNoBucket", s -> {
+            s.subs.add(TownKitCooking.addDish(OWNER, milkMelon(false)));
+            if (endIfHooksOff(s, Items.MELON_SLICE)) return;
+            allowOnly(s.cook, Items.MELON_SLICE);
+            stock(s, Items.MILK_BUCKET, 1);
+            stock(s, Items.SUGAR, 1);
+            BuildingTests.waitFor(helper, 1, 8000, s.fed(() -> s.batches(Items.MELON_SLICE) > 0), () -> {
+                s.c.check("the cook made the dish", s.batches(Items.MELON_SLICE) == 1, s.batches);
+                s.c.check("the milk bucket was used", total(s, Items.MILK_BUCKET) == 0, total(s, Items.MILK_BUCKET));
+                s.c.check("no bucket anywhere", total(s, Items.BUCKET) == 0, total(s, Items.BUCKET));
+                s.end();
+            });
+        });
+    }
+
+    /**
+     * A full pack. The cook carries the milk bucket in slot 0 and sugar in every other slot. The batch frees
+     * slot 0 for the dish, so no room is left for the bucket: it pops at her feet (Towntopia's loss log), and the dish isn't lost.
+     */
+    @GameTest(template = "empty", timeoutTicks = 9000, batch = "townkit_cook_keep_full")
+    public static void fullPackPopsBucketToLossLog(GameTestHelper helper) {
+        scene(helper, "fullPackPopsBucketToLossLog", s -> {
+            s.subs.add(TownKitCooking.addDish(OWNER, milkMelon(true)));
+            if (endIfHooksOff(s, Items.MELON_SLICE)) return;
+            allowOnly(s.cook, Items.MELON_SLICE);
+            InventoryManager inv = s.cook.getInventory();
+            ItemStack milk = new ItemStack(Items.MILK_BUCKET);
+            VillageTokenBinding.bind(milk, s.v.mgr());
+            inv.setSlot(0, milk);
+            // sugar everywhere else (the dish's own ingredient, so the cook keeps it)
+            for (int i = 1; i < 27; i++) {
+                ItemStack sugar = new ItemStack(Items.SUGAR, 64);
+                VillageTokenBinding.bind(sugar, s.v.mgr());
+                inv.setSlot(i, sugar);
+            }
+            net.minecraft.world.phys.AABB around = s.cook.getBoundingBox().inflate(12);
+            s.undo.add(() -> s.level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, around,
+                e -> e.getItem().is(Items.BUCKET)).forEach(Entity::discard));
+            BuildingTests.waitFor(helper, 1, 8000, s.fed(() -> s.batches(Items.MELON_SLICE) > 0), () -> {
+                s.c.check("the cook made the dish", s.batches(Items.MELON_SLICE) == 1, s.batches);
+                s.c.check("the dish is in her pack", carried(s.cook, Items.MELON_SLICE) == 1, carried(s.cook, Items.MELON_SLICE));
+                s.c.check("no bucket in the pack", carried(s.cook, Items.BUCKET) == 0, carried(s.cook, Items.BUCKET));
+                int popped = s.level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, s.cook.getBoundingBox().inflate(12),
+                    e -> e.getItem().is(Items.BUCKET)).stream().mapToInt(e -> e.getItem().getCount()).sum();
+                s.c.check("the bucket popped at her feet", popped == 1, popped);
+                s.end();
+            });
+        });
+    }
+
+    /** The away day: a keep-containers dish's batch leaves the bucket in the away result; the same dish without it doesn't. */
+    @GameTest(template = "empty", timeoutTicks = 600, batch = "townkit_cook_keep_away")
+    public static void awayCookKeepsBucket(GameTestHelper helper) {
+        scene(helper, "awayCookKeepsBucket", s -> {
+            Subscription keep = TownKitCooking.addDish(OWNER, milkMelon(true));
+            s.subs.add(keep);
+            if (endIfHooksOff(s, Items.MELON_SLICE)) return;
+            allowOnly(s.cook, Items.MELON_SLICE);
+            stock(s, Items.MILK_BUCKET, 4);
+            stock(s, Items.SUGAR, 4);
+            helper.runAfterDelay(20, () -> {
+                Map<Item, Integer> with = awayPreview(s);
+                s.c.check("away: the dish is cooked", with.getOrDefault(Items.MELON_SLICE, 0) > 0, with);
+                s.c.check("away: the buckets come back", with.getOrDefault(Items.BUCKET, 0) == with.getOrDefault(Items.MELON_SLICE, 0), with);
+                keep.remove();
+                s.subs.add(TownKitCooking.addDish(OWNER, milkMelon(false)));
+                Map<Item, Integer> without = awayPreview(s);
+                s.c.check("away: the dish is cooked without the flag", without.getOrDefault(Items.MELON_SLICE, 0) > 0, without);
+                s.c.check("away: no bucket without the flag", without.getOrDefault(Items.BUCKET, 0) == 0, without);
+                s.end();
+            });
+        });
+    }
+
+    // --- bowls back and milk on demand (W13) --------------------------------------------------------------------------
+
+    /** Eats {@code meals} meals one after the other: how many bowls came back (1000 for anything else that came back). */
+    private static int leftovers(Scene s, Item meal, int meals) {
+        MealLeftovers.setCounts(s.cook, new net.minecraft.nbt.CompoundTag());
+        int back = 0;
+        for (int i = 0; i < meals; i++) {
+            ItemStack left = MealLeftovers.leftover(s.cook, new ItemStack(meal), s.v.mgr());
+            if (left.is(Items.BOWL)) back++;
+            else if (!left.isEmpty()) back += 1000;
+        }
+        MealLeftovers.setCounts(s.cook, new net.minecraft.nbt.CompoundTag());
+        return back;
+    }
+
+    /**
+     * A meal in {@code #townkit:meal_returns_remainder} (test data) hands its crafting remainder back. Towntopia's rule keeps
+     * every third container, so over 9 meals some bowls came back (6 by that rule; the test only needs some).
+     */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "townkit_meal_bowl")
+    public static void taggedBowlMealReturnsBowl(GameTestHelper helper) {
+        scene(helper, "taggedBowlMealReturnsBowl", s -> {
+            if (hooksOff()) {
+                s.c.check("hooks off: the meal leaves nothing", leftovers(s, TestBlocks.TEST_BOWL_STEW.get(), 9) == 0, "");
+                s.end();
+                return;
+            }
+            s.c.check("the tag lists the test meal", new ItemStack(TestBlocks.TEST_BOWL_STEW.get()).is(CookHooks.MEAL_RETURNS_REMAINDER), "");
+            s.c.check("the container hook is attached", CookHooks.attachedKeys().contains(CookHooks.CONTAINER_OF), CookHooks.attachedKeys());
+            int back = leftovers(s, TestBlocks.TEST_BOWL_STEW.get(), 9);
+            s.c.check("some bowls came back, only bowls", back > 0 && back < 1000, back);
+            s.end();
+        });
+    }
+
+    /** A meal not in the tag: Towntopia's answer (no container) stays. */
+    @GameTest(template = "empty", timeoutTicks = 200, batch = "townkit_meal_bowl")
+    public static void untaggedMealUnchanged(GameTestHelper helper) {
+        scene(helper, "untaggedMealUnchanged", s -> {
+            s.c.check("no bowl for an untagged meal", leftovers(s, TestBlocks.TEST_BOWL_PLAIN.get(), 9) == 0, "");
+            s.c.check("Towntopia's own container (honey bottle) still answers",
+                MealLeftovers.containerOf(new ItemStack(Items.HONEY_BOTTLE)).is(Items.GLASS_BOTTLE), "");
+            s.end();
+        });
+    }
+
+    private static final int MILK_X = 16400;
+    private static final int MILK_Z = 9900;
+
+    /**
+     * A village of its own: a cook, a rancher and a ranch with a cow. The cook's only dish is an addon milk dish below its
+     * stock, no cake wanted: the rancher's milk target (Towntopia's {@code BucketNeeds}) is above 0 only then.
+     */
+    @GameTest(template = "empty", timeoutTicks = 600, batch = "townkit_cook_milk")
+    public static void rancherMilksForAddonDish(GameTestHelper helper) {
+        Checks c = new Checks("rancherMilksForAddonDish");
+        ServerLevel level = helper.getLevel();
+        TestKit.setHeadless(true);
+        BehaviourTests.forceChunks(level, MILK_X, MILK_Z);
+        int feetY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, MILK_X, MILK_Z);
+        ScenarioBuilder.VillageResult r = ScenarioBuilder.buildVillage(level, new BlockPos(MILK_X, feetY, MILK_Z), feetY, 0);
+        VillageManager mgr = r.manager();
+        if (mgr == null) {
+            helper.fail("milk test village was not created");
+            return;
+        }
+        TestKit.setSimulatedPlayer(r.townHallDoor(), level.dimension());
+        ScenarioBuilder.buildRanch(level, mgr, MILK_X - 14, feetY, MILK_Z + 14, net.minecraft.world.entity.EntityType.COW, 2);
+        NpcEntity cook = ScenarioBuilder.spawnVillager(level, mgr, r.townHallDoor().north(3), Profession.COOK);
+        ScenarioBuilder.spawnVillager(level, mgr, r.townHallDoor().north(5), Profession.RANCHER);
+        mgr.rebuildNow(level);
+        Subscription[] sub = new Subscription[1];
+        helper.testInfo.addListener(new GameTestListener() {
+            @Override
+            public void testStructureLoaded(GameTestInfo info) {
+            }
+
+            @Override
+            public void testPassed(GameTestInfo info, GameTestRunner runner) {
+                if (sub[0] != null) sub[0].remove();
+            }
+
+            @Override
+            public void testFailed(GameTestInfo info, GameTestRunner runner) {
+                if (sub[0] != null) sub[0].remove();
+            }
+
+            @Override
+            public void testAddedForRerun(GameTestInfo a, GameTestInfo b, GameTestRunner runner) {
+            }
+        });
+        BuildingTests.waitFor(helper, 1, 300, () -> {
+            VillagerModel m = mgr.getModel(cook.getNpcId());
+            return m != null && m.puppet() != null && mgr.getVillagers().stream().allMatch(v -> v.puppet() != null);
+        }, () -> {
+            sub[0] = TownKitCooking.addDish(OWNER, milkMelon(false));
+            if (hooksOff()) {
+                c.check("hooks off: the milk hook is not attached", !CookHooks.attachedKeys().contains(CookHooks.WANTS_CAKE), "");
+                BehaviourTests.finish(helper, c);
+                return;
+            }
+            // no cake wanted: only the addon dish (with milk) is allowed to this cook
+            allowOnly(cook, Items.MELON_SLICE);
+            BucketNeeds.forget(mgr);
+            c.check("the milk hook is attached", CookHooks.attachedKeys().contains(CookHooks.WANTS_CAKE), CookHooks.attachedKeys());
+            c.check("the rancher is asked to milk", BucketNeeds.milkWanted(mgr, level) > 0, BucketNeeds.milkWanted(mgr, level));
+            // the dish is off in the cook's settings: no milk for it
+            ProfessionSettings.of(cook, CookOverlay.GLOBAL.schema()).setAllowed(ALLOWED, id(Items.MELON_SLICE), false);
+            BucketNeeds.forget(mgr);
+            c.check("not allowed: no milk", BucketNeeds.milkWanted(mgr, level) == 0, BucketNeeds.milkWanted(mgr, level));
+            BehaviourTests.finish(helper, c);
+        });
     }
 }

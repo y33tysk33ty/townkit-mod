@@ -628,7 +628,7 @@ public final class PathTests {
             r.c.check("never: a smoothed route is found, ending at g", after != null && after.waypoints().get(after.waypoints().size() - 1).equals(g),
                 after == null ? "null" : after.waypoints());
             if (after == null) return;
-            r.c.check("never: the traced tiles go round the tile", !passes(after, n), feet(after));
+            r.c.checkHooksOn("never: the traced tiles go round the tile", !passes(after, n), feet(after));
             boolean crossed = false;
             List<BlockPos> w = after.waypoints();
             for (int i = 0; i + 1 < w.size(); i++) crossed |= crosses(w.get(i), w.get(i + 1), n);

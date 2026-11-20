@@ -4,7 +4,7 @@
 
 | TownKit | Built for Towntopia |
 |---|---|
-| 0.7.1, 0.7.2 | 0.1.3 (mod id `towntopia`) |
+| 0.7.1, 0.7.2, 0.8.0 | 0.1.3 (mod id `towntopia`) |
 | 0.3.0 to 0.7.0 | 0.1.2 |
 
 - **Older Towntopia** than TownKit was built for: NeoForge refuses to load ("Mod townkit requires towntopia <version> or above"). None of TownKit's code runs.
@@ -61,3 +61,11 @@ TownKit holds every one of its changes to Towntopia's code, so addons don't need
 - No recycling for addon gear; removing raw iron or gold smelting isn't supported; Towntopia's own ores, materials and tiers can't be removed.
 - Addon ores have no label in the mine room or town statistics.
 - A changed Towntopia dish keeps Towntopia's "needs" text on players' screens.
+- A tag dish is expanded to at most 8 variants, and the Mayor's stock orders see only its first variant (0.8.0).
+- Towntopia's own cake uses up three milk buckets and gives none back unless an addon opts it into `keepContainers` (0.8.0).
+
+**Farming** (details in [Farming](farming.md#limits))
+- One modded crop per bush, hanging and log kind: a Towntopia bug, TownKit can't fix it.
+- A harvest rule on a field crop needs `break_and_replant` in the crop file; `Use(SHEARS)` and `Use(AXE)` need the crop file's `harvest_tool`.
+- Two-block crops with a rule are skipped in the away catch-up.
+- A rule that gets ten bad answers in a row is off until `/reload` or a restart.

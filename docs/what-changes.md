@@ -24,7 +24,8 @@ Each addon decides what it does. These are the things TownKit lets them do:
 | **Mood icons** | New thought and speech bubbles over villagers' heads, Towntopia's bubbles swapped for others |
 | **Skins and looks** | New looks to pick on the Mayor screen's **Theme page**, special skins for single villagers (an envoy, a group of soldiers) |
 | **Animations and props** | Villagers waving, marching or playing new moves, holding props while they do |
-| **Work** | New dishes for the cook (some made at a special cooking station), new materials, tiers and gear for the blacksmith, new ores for the miner. These show up in the cook's and miner's settings screens like Towntopia's own |
+| **Work** | New dishes for the cook (some made at a special cooking station), new materials, tiers and gear for the blacksmith, new ores for the miner. These show up in the cook's and miner's settings screens like Towntopia's own. Modded meals that keep their own effects, dishes made from "any vegetable" the village has, buckets and bottles coming back after cooking |
+| **Farming** | The farmer picking modded crops by right-clicking them (the plant stays and regrows), making seeds from produce (corn kernels from corn), more crops getting the farmer's skill bonus |
 | **Village events** | Addons reacting when a village is founded, goes quiet, or is raided |
 
 ## Your choices

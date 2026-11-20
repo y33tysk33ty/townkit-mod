@@ -19,6 +19,7 @@ import org.objectweb.asm.tree.MethodInsnNode;
 public record WorkSite(String owner, String method, Kind kind) {
     private static final String P = "com/alex/test/";
     private static final String COOK_OWNER = P + "village/villagers/cook/behavior/CookActivity";
+    private static final String COOK_RECIPE = COOK_OWNER + "$Recipe";
     private static final String SCHEMA_OWNER = P + "village/villagers/cook/settings/CookSettingsSchema";
     private static final String SMITH = P + "village/villagers/blacksmith/behavior/BlacksmithActivity";
     private static final String MAT = SMITH + "$Mat";
@@ -47,6 +48,11 @@ public record WorkSite(String owner, String method, Kind kind) {
         /** {@code dup} before a one-argument call, {@code invokestatic bridge(A arg, R)R} after it. */
         DUP_ARG,
         /**
+         * {@code dup} before a no-argument {@code invokevirtual} (an accessor), {@code invokestatic bridge(Object receiver, R)R}
+         * after it.
+         */
+        DUP_RECEIVER,
+        /**
          * Before every return of a static method: every argument is loaded again, then {@code invokestatic bridge(R, A...)R}
          * (R: the return type; A: the argument types, references as {@code Object}).
          */
@@ -69,6 +75,11 @@ public record WorkSite(String owner, String method, Kind kind) {
         INGREDIENTS(Opcodes.GETSTATIC, COOK_OWNER, "INGREDIENTS", SET, Style.AFTER),
         /** {@code CookActivity.RAW_FOR_COOK}: raw foods villagers leave for the cook (not part of the dish overlay). */
         RAW_FOR_COOK(Opcodes.GETSTATIC, COOK_OWNER, "RAW_FOR_COOK", SET, Style.AFTER),
+        /**
+         * {@code CookActivity$Recipe.inputsPerBatch()}: a dish's ingredients for one batch (a tag dish's swap to the
+         * village's chosen variant).
+         */
+        INPUTS(Opcodes.INVOKEVIRTUAL, COOK_RECIPE, "inputsPerBatch", "()Ljava/util/Map;", Style.DUP_RECEIVER),
         /** {@code CookSettingsSchema.SCHEMA}: the cook's settings rows. */
         COOK_SCHEMA(Opcodes.GETSTATIC, SCHEMA_OWNER, "SCHEMA", "L" + P + "village/villagers/settings/SettingsSchema;", Style.AFTER),
         /** {@code CookSettingsSchema.DISHES}: the rows' own dish list (the schema is built from it at class init). */
@@ -200,6 +211,10 @@ public record WorkSite(String owner, String method, Kind kind) {
                 }
                 case AFTER_ERASED -> "(Ljava/lang/Object;)Ljava/lang/Object;";
                 case DUP_OWNER -> "(Ljava/lang/Object;" + this.desc + ")" + this.desc;
+                case DUP_RECEIVER -> {
+                    String r = Type.getMethodType(this.desc).getReturnType().getDescriptor();
+                    yield "(Ljava/lang/Object;" + r + ")" + r;
+                }
                 case DUP_ARG -> {
                     Type m = Type.getMethodType(this.desc);
                     yield "(" + m.getArgumentTypes()[0].getDescriptor() + m.getReturnType().getDescriptor() + ")" + m.getReturnType().getDescriptor();

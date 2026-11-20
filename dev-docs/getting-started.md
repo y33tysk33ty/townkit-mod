@@ -6,7 +6,7 @@ TownKit isn't on a public Maven repository yet. Use one of these:
 
 **A. The release jar in a `libs/` folder** (simplest)
 
-Put `townkit-0.7.2.jar` (from CurseForge or this repo's releases) and Towntopia's jar in your addon's `libs/` folder:
+Put `townkit-0.8.0.jar` (from CurseForge or this repo's releases) and Towntopia's jar in your addon's `libs/` folder:
 
 ```gradle
 repositories {
@@ -14,7 +14,7 @@ repositories {
     maven { url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' } // Towntopia needs GeckoLib
 }
 dependencies {
-    implementation "blank:townkit:0.7.2"          // libs/townkit-0.7.2.jar
+    implementation "blank:townkit:0.8.0"          // libs/townkit-0.8.0.jar
     // only needed to compile against Towntopia's own classes (raw hooks, Unwrap); the stable API doesn't need it
     compileOnly "blank:towntopia:0.1.3"           // libs/towntopia-0.1.3.jar
 }
@@ -31,7 +31,7 @@ repositories {
     maven { url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
 }
 dependencies {
-    implementation "townkit:townkit:0.7.2"
+    implementation "townkit:townkit:0.8.0"
     compileOnly "blank:towntopia:0.1.3"
 }
 ```
@@ -46,7 +46,7 @@ In your `META-INF/neoforge.mods.toml`:
 [[dependencies.myaddon]]
     modId="townkit"
     type="required"
-    versionRange="[0.7.2,)"
+    versionRange="[0.8.0,)"
     ordering="AFTER"
     side="BOTH"
 ```

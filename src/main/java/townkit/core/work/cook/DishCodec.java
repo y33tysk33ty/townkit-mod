@@ -4,9 +4,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonPrimitive;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import net.minecraft.ResourceLocationException;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import townkit.api.work.Dish;
 import townkit.api.work.DishChange;
@@ -17,12 +20,15 @@ import townkit.core.work.WorkFiles;
  * Reads (and writes) {@code cook_dishes} data files. The fields are the {@link Dish} ones:
  * <pre>
  * {"action":"add","result":"mymod:stew","output":1,"ingredients":{"mymod:bean":2,"minecraft:bowl":1},
- *  "heated":true,"nutrition":8,"station":"mymod:pot","stock":16}
+ *  "heated":true,"nutrition":8,"station":"mymod:pot","stock":16,"keep_containers":false}
  * {"action":"change","result":"minecraft:bread","ingredients":{"minecraft:wheat":2}}
  * {"action":"remove","result":"minecraft:cake"}
  * </pre>
- * An add needs {@code result} and {@code ingredients} (the rest default as in {@link Dish#builder}); a change sets only
- * the fields it names (ingredients replace the whole list; {@code "station":null} takes the station away); a remove
+ * In {@code "ingredients"} a key starting with {@code #} is an item tag (for example {@code "#c:crops/onion": 1}); the
+ * other keys are item ids. {@code "keep_containers"} is true or false (default false). An add needs {@code result} and
+ * {@code ingredients} (the rest default as in {@link Dish#builder}); a change sets only
+ * the fields it names (ingredients, item and tag ones together, replace the whole list; {@code "station":null} takes the
+ * station away); a remove
  * names only {@code result}. An unknown item, a count, output or stock below 1, a number that isn't a whole number, or a
  * nutrition outside 0..20 skips the file with one log line.
  */
@@ -43,7 +49,10 @@ public final class DishCodec implements WorkFiles.WorkCodec<Item, Dish> {
                 Dish.Builder b = Dish.builder(result);
                 JsonElement in = json.get("ingredients");
                 if (in == null) throw new JsonParseException("missing \"ingredients\"");
-                ingredients(in).forEach(b::ingredient);
+                Ingredients ing = ingredients(in);
+                ing.items.forEach(b::ingredient);
+                ing.tags.forEach(b::ingredient);
+                if (json.has("keep_containers")) b.keepContainers(bool(json.get("keep_containers"), "keep_containers"));
                 if (json.has("output")) b.output(whole(json.get("output"), "output"));
                 if (json.has("heated")) b.heated(bool(json.get("heated"), "heated"));
                 if (json.has("nutrition")) b.nutrition(whole(json.get("nutrition"), "nutrition"));
@@ -53,7 +62,12 @@ public final class DishCodec implements WorkFiles.WorkCodec<Item, Dish> {
             }
             case CHANGE -> {
                 DishChange.Builder b = DishChange.builder();
-                if (json.has("ingredients")) ingredients(json.get("ingredients")).forEach(b::ingredient);
+                if (json.has("ingredients")) {
+                    Ingredients ing = ingredients(json.get("ingredients"));
+                    ing.items.forEach(b::ingredient);
+                    ing.tags.forEach(b::ingredient);
+                }
+                if (json.has("keep_containers")) b.keepContainers(bool(json.get("keep_containers"), "keep_containers"));
                 if (json.has("output")) b.output(whole(json.get("output"), "output"));
                 if (json.has("heated")) b.heated(bool(json.get("heated"), "heated"));
                 if (json.has("nutrition")) b.nutrition(whole(json.get("nutrition"), "nutrition"));
@@ -75,22 +89,35 @@ public final class DishCodec implements WorkFiles.WorkCodec<Item, Dish> {
         o.addProperty("output", dish.outputPerBatch());
         JsonObject in = new JsonObject();
         dish.ingredients().forEach((item, n) -> in.addProperty(this.items.id(item).toString(), n));
+        dish.tagIngredients().forEach((tag, n) -> in.addProperty("#" + tag.location(), n));
         o.add("ingredients", in);
         o.addProperty("heated", dish.heated());
         o.addProperty("nutrition", dish.nutrition());
         if (dish.station() != null) o.addProperty("station", dish.station().toString());
         o.addProperty("stock", dish.stock());
+        if (dish.keepContainers()) o.addProperty("keep_containers", true);
         return o;
     }
 
-    private Map<Item, Integer> ingredients(JsonElement e) {
-        if (!e.isJsonObject()) throw new JsonParseException("\"ingredients\" must be an object of item id to count");
-        Map<Item, Integer> out = new java.util.LinkedHashMap<>();
+    /** The item and tag ingredients of an {@code "ingredients"} object (a key starting with {@code #} is a tag). */
+    private record Ingredients(Map<Item, Integer> items, Map<TagKey<Item>, Integer> tags) {
+    }
+
+    private Ingredients ingredients(JsonElement e) {
+        if (!e.isJsonObject()) throw new JsonParseException("\"ingredients\" must be an object of item id (or #tag) to count");
+        Map<Item, Integer> items = new LinkedHashMap<>();
+        Map<TagKey<Item>, Integer> tags = new LinkedHashMap<>();
         for (Map.Entry<String, JsonElement> i : e.getAsJsonObject().entrySet()) {
-            out.put(item(new JsonPrimitive(i.getKey()), "ingredient"), whole(i.getValue(), "count of " + i.getKey()));
+            String key = i.getKey();
+            int count = whole(i.getValue(), "count of " + key);
+            if (key.startsWith("#")) {
+                tags.put(TagKey.create(Registries.ITEM, id(key.substring(1), "ingredient tag")), count);
+            } else {
+                items.put(item(new JsonPrimitive(key), "ingredient"), count);
+            }
         }
-        if (out.isEmpty()) throw new JsonParseException("\"ingredients\" is empty");
-        return out;
+        if (items.isEmpty() && tags.isEmpty()) throw new JsonParseException("\"ingredients\" is empty");
+        return new Ingredients(items, tags);
     }
 
     private Item item(JsonElement e, String what) {

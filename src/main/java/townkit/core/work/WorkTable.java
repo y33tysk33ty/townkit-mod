@@ -136,6 +136,15 @@ public final class WorkTable<K, E> {
         return this.state.version;
     }
 
+    /**
+     * A new version with the same entries: something the merged views read besides the table changed (item tags after a
+     * reload), so views keyed by {@link #version()} are built again.
+     */
+    public synchronized void bump() {
+        State<K, E> s = this.state;
+        this.state = new State<>(s.list, s.byKey, s.touched, s.version + 1, s.unknown, s.owners);
+    }
+
     private void rebuild() {
         long version = this.state.version + 1;
         if (this.java.isEmpty() && this.files.isEmpty()) {

@@ -1,0 +1,7 @@
+{
+  "planting_item": "townkit:test_pick_seed",
+  "crop_block": "townkit:test_pick_crop",
+  "maturity": { "type": "towntopia:age_property" },
+  "planting": { "type": "towntopia:farmland" },
+  "harvest": { "type": "towntopia:break_and_replant" }
+}

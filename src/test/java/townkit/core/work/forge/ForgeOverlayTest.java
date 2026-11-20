@@ -92,6 +92,11 @@ class ForgeOverlayTest {
         }
 
         @Override
+        public int defaultNutrition(Item item) {
+            return 0;
+        }
+
+        @Override
         public String name(Item item) {
             return this.ids.get(item).getPath();
         }

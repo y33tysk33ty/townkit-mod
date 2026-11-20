@@ -2,7 +2,7 @@
 
 TownKit is a library for **Towntopia addons**. It holds every change to Towntopia's code, so your addon doesn't need mixins of its own. It gives you a stable API in TownKit's own types, so a Towntopia update gets fixed once, inside TownKit, instead of breaking your addon.
 
-This guide covers TownKit 0.7.2 (Towntopia 0.1.3, Minecraft 1.21.1, NeoForge).
+This guide covers TownKit 0.8.0 (Towntopia 0.1.3, Minecraft 1.21.1, NeoForge).
 
 ## Start here
 
@@ -22,7 +22,8 @@ This guide covers TownKit 0.7.2 (Towntopia 0.1.3, Minecraft 1.21.1, NeoForge).
 | [Mood icons](mood-icons.md) | `townkit.api.bubble` | Bubble icons, pop-ups, ongoing states, hiding and swapping Towntopia's |
 | [Skins and looks](skins-and-looks.md) | `townkit.api.skin` | Whole looks players pick, skins for single villagers |
 | [Animations and props](animations-and-props.md) | `townkit.api.anim` | Playing, looping and replacing moves, props on bones |
-| [Work recipes](work-recipes.md) | `townkit.api.work` | The cook's dishes and stations, the smith's materials, tiers, recipes and smelting, the miner's ores |
+| [Work recipes](work-recipes.md) | `townkit.api.work` | The cook's dishes and stations, the smith's materials, tiers, recipes and smelting, the miner's ores; tag ingredients, containers back and own food values for dishes |
+| [Farming](farming.md) | `townkit.api.farm` | Harvest rules (when a crop is ripe, picking by right-click), seeds made from produce, the farmer's bonus tag |
 | [Art files](art-files.md) | assets | The JSON files for bubbles, looks, skins, moves and props |
 
 ## More

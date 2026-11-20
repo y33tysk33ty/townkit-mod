@@ -55,6 +55,7 @@ class ForeignInjectorTest {
     private static final String STAND_INS = "townkit/core/building/StandIns";
     private static final String NAV_BRIDGE = "townkit/core/nav/NavBridge";
     private static final String COOK_OVERLAY = "townkit/core/work/cook/CookOverlay";
+    private static final String COOK_VARIANTS = "townkit/core/work/cook/CookVariants";
 
     private static ClassNode load(ZipFile zip, String owner) throws Exception {
         ZipEntry e = zip.getEntry(PREFIX + owner + ".class");
@@ -250,6 +251,22 @@ class ForeignInjectorTest {
     void wrapOfCookRecipesRead() throws Exception {
         foreignEditAfterRewrite("village/villagers/cook/behavior/CookActivity", "recipes",
                 in -> in instanceof FieldInsnNode f && f.getOpcode() == Opcodes.GETSTATIC && f.name.equals("RECIPES"), COOK_OVERLAY);
+    }
+
+    /** A work site of the DUP_RECEIVER style: the cook's {@code inputsPerBatch()} call when a batch's inputs are taken. */
+    @Test
+    void wrapOfCookInputsPerBatchCall() throws Exception {
+        foreignEditAfterRewrite("village/villagers/cook/behavior/CookActivity", "consumeInputs",
+                in -> in instanceof MethodInsnNode mi && mi.getOpcode() == Opcodes.INVOKEVIRTUAL && mi.name.equals("inputsPerBatch"),
+                COOK_VARIANTS);
+    }
+
+    /** The same in another class (the away cook's batch). */
+    @Test
+    void wrapOfAwayCookInputsPerBatchCall() throws Exception {
+        foreignEditAfterRewrite("village/economy/away/jobs/CookAway$Shift", "cook",
+                in -> in instanceof MethodInsnNode mi && mi.getOpcode() == Opcodes.INVOKEVIRTUAL && mi.name.equals("inputsPerBatch"),
+                COOK_VARIANTS);
     }
 
     /**

@@ -91,7 +91,7 @@ public final class WorkSiteRewriter {
                 after.add(new TypeInsnNode(Opcodes.CHECKCAST, Type.getType(e.kind.desc).getInternalName()));
                 list.insert(e.insn, after);
             }
-            case DUP_OWNER, DUP_ARG -> {
+            case DUP_OWNER, DUP_ARG, DUP_RECEIVER -> {
                 list.insertBefore(e.insn, new InsnNode(Opcodes.DUP));
                 list.insert(e.insn, new MethodInsnNode(Opcodes.INVOKESTATIC, owner, name, desc, false));
             }

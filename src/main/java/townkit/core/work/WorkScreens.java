@@ -312,7 +312,7 @@ public final class WorkScreens {
 
     /** Attaches the window hooks while the cook's list is changed, detaches them otherwise. Called by the cook's refresh. */
     public static synchronized void refresh() {
-        boolean wanted = CookOverlay.GLOBAL.touched() || MiningOverlay.GLOBAL.touched();
+        boolean wanted = (CookOverlay.GLOBAL.touched() || MiningOverlay.GLOBAL.touched()) && !townkit.core.building.RewrittenSites.GLOBAL.hooksOff();
         set(MENU_INIT, true, wanted, WorkScreens::afterMenuInit);
         set(WRITE_OPENING, false, wanted, WorkScreens::beforeWriteOpening);
         set(WRITE_OPENING, true, wanted, call -> WRITING.remove());

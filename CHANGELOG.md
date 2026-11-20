@@ -2,6 +2,21 @@
 
 Stable API (`townkit.api`): before 1.0.0, a minor release may break it, and every break is listed here. Anything removed is deprecated for at least one minor release first. The experimental hooks (`townkit.api.hooks`) follow Towntopia's code and may change with any Towntopia update.
 
+## 0.8.0 (2026-11-19)
+
+Modded cooking and farming: Towntopia's cook and farmer can work with other mods' food and crops. Made for **Towntopia 0.1.3**. No breaking changes: the stable API only grows (`Dish` and `DishChange` get new members and the old `Dish` constructor stays; the new package `townkit.api.farm`; everything `@since 0.8.0`). With nothing registered, worlds behave as before.
+
+- **Own food values** (`Dish` with nutrition 0): the dish keeps the item's own food (effects, saturation), and the cook now plans with the item's own nutrition instead of 0.
+- **Tag ingredients** (`Dish.Builder.ingredient(TagKey<Item>, int)`; data: `#tag` keys in `"ingredients"`): the cook uses whichever tag member the village has most of. One batch is one member; at most 8 variants per dish; the Mayor's stock orders see the first variant.
+- **Containers back** (`keepContainers`; data `"keep_containers"`): buckets and bottles come back into the cook's pack, and into the away pantry in the away catch-up. The item tag `townkit:meal_returns_remainder` (empty) makes tagged meals hand their bowl back when eaten. The rancher also milks for any addon milk dish the cook may make and keeps in stock (the cake keeps Towntopia's own rule). Towntopia's own cake still uses up three milk buckets unless an addon opts it in.
+- **Farming** (`TownKitFarming`, `townkit.api.farm`):
+  - **Seeds from produce** (`seedFrom`, `removeSeedFrom`, `seedSources`; data kind `farm_seeds`): the farmer makes an addon crop's seeds from its produce, like melon and pumpkin seeds.
+  - **Harvest rules** (`harvest`, `changeHarvest`, `removeHarvest`, `harvests`, `harvestFor`; data kind `farm_harvest`): when a crop block counts as ripe, and `Use` (the farmer right-clicks it and the plant stays) or `Break` (the items the break spawns go into her pack). Picked crops roll the farmer's skill bonus. The away catch-up follows the rules.
+  - **Bonus produce**: the item tag `townkit:farmer_bonus_produce` (empty) lets more drops roll the farmer's skill bonus.
+- **Limits** ([Farming](dev-docs/farming.md#limits)): Towntopia uses only the first modded bush, hanging and log crop per kind (a Towntopia bug); field-crop rules need `break_and_replant` in the crop file; `Use(SHEARS)` and `Use(AXE)` need the crop file's `harvest_tool`; two-block crops with a rule are skipped in the away catch-up; a rule switched off after ten bad answers stays off until `/reload`.
+- Hooks: **7,965**.
+- Docs: [Work recipes](dev-docs/work-recipes.md#modded-food-080) (modded food) and the new [Farming](dev-docs/farming.md) page.
+
 ## 0.7.2 (2026-11-17)
 
 Open source release. **No API or gameplay changes**: worlds behave exactly as with 0.7.1.

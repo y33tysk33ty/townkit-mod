@@ -364,6 +364,47 @@ public final class TownKitPerfTest {
         }
     }
 
+    /**
+     * The {@code -Ptownkit.perf.modules08=true} setup (hooks-on runs only): what an addon registers with the 0.8.0 work
+     * modules: one harvest rule on wheat (ripe at age 7, Towntopia's own Break harvest, so the farm hooks attach on every
+     * field scan), one tag dish (small flowers), one dish that keeps its containers (milk bucket) and one seed source
+     * (beetroot seeds from beetroot). Server side only. {@link #report} says what is in force at the end.
+     */
+    static final class Modules08Setup {
+        private static final String OWNER = "townkit-perf";
+        private static final net.minecraft.resources.ResourceLocation RULE_ID =
+            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(TownKit.MODID, "perf_wheat");
+        private final java.util.List<townkit.api.Subscription> subs = new java.util.ArrayList<>();
+
+        static Modules08Setup register() {
+            Modules08Setup w = new Modules08Setup();
+            w.subs.add(townkit.api.farm.TownKitFarming.harvest(OWNER, townkit.api.farm.HarvestRule.builder(RULE_ID)
+                .block(Blocks.WHEAT).ripe(new townkit.api.farm.Ripe.AtLeast("age", 7)).build()));
+            w.subs.add(townkit.api.work.TownKitCooking.addDish(OWNER,
+                townkit.api.work.Dish.builder(net.minecraft.world.item.Items.MUSHROOM_STEW)
+                    .ingredient(net.minecraft.tags.ItemTags.SMALL_FLOWERS, 2).nutrition(0).build()));
+            w.subs.add(townkit.api.work.TownKitCooking.addDish(OWNER,
+                townkit.api.work.Dish.builder(net.minecraft.world.item.Items.CAKE)
+                    .ingredient(net.minecraft.world.item.Items.MILK_BUCKET, 1).ingredient(net.minecraft.world.item.Items.SUGAR, 1)
+                    .keepContainers(true).build()));
+            w.subs.add(townkit.api.farm.TownKitFarming.seedFrom(OWNER, net.minecraft.world.item.Items.BEETROOT_SEEDS,
+                net.minecraft.world.item.Items.BEETROOT, 2));
+            return w;
+        }
+
+        String report() {
+            boolean rule = townkit.api.farm.TownKitFarming.harvests().stream().anyMatch(r -> r.id().equals(RULE_ID));
+            long tagDishes = townkit.api.work.TownKitCooking.dishes().stream().filter(d -> !d.tagIngredients().isEmpty()).count();
+            long keepDishes = townkit.api.work.TownKitCooking.dishes().stream().filter(townkit.api.work.Dish::keepContainers).count();
+            boolean seed = townkit.api.farm.TownKitFarming.seedSources().containsKey(net.minecraft.world.item.Items.BEETROOT_SEEDS);
+            return "harvest rule " + rule + ", tag dishes " + tagDishes + ", keep-container dishes " + keepDishes + ", seed source " + seed;
+        }
+
+        void remove() {
+            subs.forEach(townkit.api.Subscription::remove);
+        }
+    }
+
     @GameTest(template = "empty", timeoutTicks = WARMUP + MEASURE + 400, batch = "townkit_perf")
     public static void hookCost(GameTestHelper helper) {
         if (!Boolean.getBoolean("townkit.perf")) {
@@ -469,6 +510,9 @@ public final class TownKitPerfTest {
         // -Dtownkit.perf.work071=true: one station dish, one smith tier with a recipe, one ore with lucky rolls (0.7.1 work recipes)
         boolean work071 = Boolean.getBoolean("townkit.perf.work071");
         Work071Setup workSetup = work071 ? Work071Setup.register() : null;
+        // -Dtownkit.perf.modules08=true: one wheat harvest rule, one tag dish, one keep-containers dish, one seed source (0.8.0 modules)
+        boolean modules08 = Boolean.getBoolean("townkit.perf.modules08");
+        Modules08Setup mod08Setup = modules08 ? Modules08Setup.register() : null;
         // the smith's material enum (8 hooks off, 24 hooks on) is read in every run, so the plain pairs show its cost too
         String materialsInfo = Work071Setup.materials();
         long finalSink = sink;
@@ -498,7 +542,7 @@ public final class TownKitPerfTest {
             if (tick[0] == WARMUP + MEASURE) {
                 PerfMonitor.TickStats s = PerfMonitor.stats();
                 TownKit.LOG.info(String.format(Locale.ROOT,
-                    "[TownKit perf] hooks=%s census=%s paths=" + paths + " modules07=" + (modSetup == null ? "false" : "true (" + modSetup.report() + ")") + " work071=" + (workSetup == null ? "false" : "true (" + workSetup.report() + ")") + " " + materialsInfo + " noopChoice=" + noopChoice + " standIns=" + Boolean.getBoolean("townkit.perf.standIns") + " villageEvents=" + villageEvents + " villageEventCount=" + villageEventCount[0] + " buildingEvents=" + eventCount[0] + " villagers=%d (%d in village) | server tick mean %.3f ms, p50 %.3f, p95 %.3f, p99 %.3f, max %.1f over %d ticks"
+                    "[TownKit perf] hooks=%s census=%s paths=" + paths + " modules07=" + (modSetup == null ? "false" : "true (" + modSetup.report() + ")") + " work071=" + (workSetup == null ? "false" : "true (" + workSetup.report() + ")") + " modules08=" + (mod08Setup == null ? "false" : "true (" + mod08Setup.report() + ")") + " " + materialsInfo + " noopChoice=" + noopChoice + " standIns=" + Boolean.getBoolean("townkit.perf.standIns") + " villageEvents=" + villageEvents + " villageEventCount=" + villageEventCount[0] + " buildingEvents=" + eventCount[0] + " villagers=%d (%d in village) | server tick mean %.3f ms, p50 %.3f, p95 %.3f, p99 %.3f, max %.1f over %d ticks"
                         + " | hooked static call %.2f ns, hooked getter %.2f ns (sink %d)",
                     hooks ? "on" : "off", census, villagers, mgr.getVillagers().size(), s.meanMs(), s.p50Ms(), s.p95Ms(), s.p99Ms(), s.maxMs(),
                     s.ticks(), sNs, gNs, finalSink & 1));
@@ -535,6 +579,7 @@ public final class TownKitPerfTest {
                 standIns.forEach(townkit.api.Subscription::remove);
                 if (modSetup != null) modSetup.remove();
                 if (workSetup != null) workSetup.remove();
+                if (mod08Setup != null) mod08Setup.remove();
                 TestKit.clearSimulatedPlayer();
                 helper.succeed();
             }

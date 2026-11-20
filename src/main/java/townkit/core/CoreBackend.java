@@ -46,6 +46,7 @@ public final class CoreBackend implements TownKitBackend {
     private final townkit.core.skin.CoreSkins skins = new townkit.core.skin.CoreSkins();
     private final townkit.core.anim.CoreAnimations animations = new townkit.core.anim.CoreAnimations();
     private final townkit.core.work.CoreWork work = new townkit.core.work.CoreWork();
+    private final townkit.core.farm.CoreFarm farm = new townkit.core.farm.CoreFarm(this.work);
 
     @Override
     public HookRegistration addHook(String owner, String key, HookListener listener, boolean after) {
@@ -159,6 +160,12 @@ public final class CoreBackend implements TownKitBackend {
     @Override
     public townkit.api.spi.TownKitWorkView work() {
         return this.work;
+    }
+
+    /** @since 0.8.0 */
+    @Override
+    public townkit.api.spi.TownKitFarmView farm() {
+        return this.farm;
     }
 
     @Override

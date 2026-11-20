@@ -53,3 +53,25 @@ keep client.VillagerGeoModel#rigSkin
 keep entity.mayor.MayorSpawnManager#ensureMayor
 keep village.villagers.guard.behavior.GuardThreatEvents#resolveManager
 keep village.VillageCrowding#isInside
+
+# 0.8.0 W13: the cook consumes a batch's inputs here (private; the away cook's nested Shift too): containers go back
+keep village.villagers.cook.behavior.CookActivity#consumeInputs
+keep village.economy.away.jobs.CookAway$Shift#takeAll
+
+# 0.8.0 W13: a cook "wants cakes" here (private): addon dishes with milk make ranchers milk too
+keep village.villagers.supplies.BucketNeeds#wantsCake
+
+# 0.8.0 W5: the farmer bonus-roll item (private): items in #townkit:farmer_bonus_produce get the skill bonus too
+keep village.villagers.farmer.behavior.FarmerActivity#eligibleBonusProduct
+
+# 0.8.0 W1: Towntopia's "full bush" test (private): a harvest rule's block is full when its ripe property is at its highest
+keep village.villagers.farmer.FarmerPerennials#fullBush
+
+# 0.8.0 W1: the farmer's harvest and pick steps (private): a harvest rule's Use action picks by right-click instead,
+# and a Break rule's harvest collects what neighbouring parts drop (both harvestBlock overloads match; TownKit uses the
+# one with the tool)
+keep village.villagers.farmer.behavior.FarmerActivity#(harvestCrop|pickBerries|pickGlowBerries|harvestPod|harvestBlock)
+
+# 0.8.0 W1: the away farmer's harvest of one plot (private, in its nested Shift): a Use rule rolls its away yield instead of
+# breaking the crop, and a rule block with a same-crop block above is skipped
+keep village.economy.away.jobs.FarmerAway$Shift#harvest

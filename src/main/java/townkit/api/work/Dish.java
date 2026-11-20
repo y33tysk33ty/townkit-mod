@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nullable;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 
 /**
@@ -17,7 +18,8 @@ import net.minecraft.world.item.Item;
  *   <li>{@code heated}: cooked on a heat source (smoker, furnace or campfire, Towntopia's choice) rather than at a crafting
  *   table.</li>
  *   <li>{@code nutrition}: Towntopia sets the food value of every dish its cook makes to this (with saturation 0.6),
- *   0 to 20. {@code 0} keeps the item's own food values (use it for a modded food that has its own).</li>
+ *   0 to 20. {@code 0} keeps the item's own food values (use it for a modded food that has its own); the cook
+ *   then plans with the item's own nutrition.</li>
  *   <li>{@code station}: the id of an addon {@link CookStation} ({@link TownKitCooking#station}). The cook makes the
  *   dish only while a kitchen of its village holds one of the station's blocks, and works at that block the way it
  *   works at a crafting table (Towntopia's table batch time; {@code heated} is not used then). A station nobody
@@ -29,29 +31,46 @@ import net.minecraft.world.item.Item;
  *
  * @param result         what the cook makes (also the dish's key: one dish per result item)
  * @param outputPerBatch how many of {@code result} one batch makes, at least 1
- * @param ingredients    what one batch uses up, each count at least 1; never empty
+ * @param ingredients    the items one batch uses up, each count at least 1
+ * @param tagIngredients the item tags one batch uses up (any item in the tag will do), each count at least 1; with
+ *                       {@code ingredients} never both empty
  * @param heated         cooked on a heat source (true) or at a crafting table (false)
  * @param nutrition      the food value Towntopia gives the made dish, 0 (keep the item's own) to 20
  * @param station        the addon station's id, or null for none
  * @param stock          the default stock target, at least 1 ({@link #DEFAULT_STOCK} unless set)
- * @since 0.7.1
+ * @param keepContainers whether a container an ingredient leaves behind (a bucket, a bottle) is kept rather than
+ *                       used up; see {@link Builder#keepContainers}
+ * @since 0.7.1 (the {@code tagIngredients} and {@code keepContainers} components since 0.8.0)
  */
-public record Dish(Item result, int outputPerBatch, Map<Item, Integer> ingredients, boolean heated, int nutrition,
-        @Nullable ResourceLocation station, int stock) {
+public record Dish(Item result, int outputPerBatch, Map<Item, Integer> ingredients, Map<TagKey<Item>, Integer> tagIngredients,
+        boolean heated, int nutrition, @Nullable ResourceLocation station, int stock, boolean keepContainers) {
     /** The highest nutrition a dish may give (a full hunger bar). */
     public static final int MAX_NUTRITION = 20;
     /** The stock target a dish gets unless its builder sets one (Towntopia's own dishes use 8 to 64). */
     public static final int DEFAULT_STOCK = 16;
 
     /**
-     * Checks and copies the values. Throws NullPointerException on a null result, ingredient map, ingredient or count,
-     * and IllegalArgumentException when there are no ingredients, a count, {@code outputPerBatch} or {@code stock} is
+     * The 0.7.1 form: no tag ingredients, {@code keepContainers} false.
+     *
+     * @since 0.7.1
+     */
+    public Dish(Item result, int outputPerBatch, Map<Item, Integer> ingredients, boolean heated, int nutrition,
+            @Nullable ResourceLocation station, int stock) {
+        this(result, outputPerBatch, ingredients, Map.of(), heated, nutrition, station, stock, false);
+    }
+
+    /**
+     * Checks and copies the values. Throws NullPointerException on a null result, ingredient map, tag map, ingredient, tag or
+     * count, and IllegalArgumentException when there are no ingredients and no tag ingredients, a count, {@code outputPerBatch} or {@code stock} is
      * below 1, or {@code nutrition} is outside 0..20.
      */
     public Dish {
         Objects.requireNonNull(result, "result");
         Objects.requireNonNull(ingredients, "ingredients");
-        if (ingredients.isEmpty()) throw new IllegalArgumentException("a dish needs at least one ingredient");
+        Objects.requireNonNull(tagIngredients, "tagIngredients");
+        if (ingredients.isEmpty() && tagIngredients.isEmpty()) {
+            throw new IllegalArgumentException("a dish needs at least one ingredient (item or tag)");
+        }
         if (outputPerBatch < 1) throw new IllegalArgumentException("outputPerBatch must be at least 1: " + outputPerBatch);
         if (stock < 1) throw new IllegalArgumentException("stock must be at least 1: " + stock);
         if (nutrition < 0 || nutrition > MAX_NUTRITION) {
@@ -65,9 +84,17 @@ public record Dish(Item result, int outputPerBatch, Map<Item, Integer> ingredien
             copy.put(item, count);
         }
         ingredients = Collections.unmodifiableMap(copy);
+        Map<TagKey<Item>, Integer> tags = new LinkedHashMap<>();
+        for (Map.Entry<TagKey<Item>, Integer> e : tagIngredients.entrySet()) {
+            TagKey<Item> tag = Objects.requireNonNull(e.getKey(), "tag ingredient");
+            int count = Objects.requireNonNull(e.getValue(), "tag ingredient count");
+            if (count < 1) throw new IllegalArgumentException("ingredient counts must be at least 1: " + count);
+            tags.put(tag, count);
+        }
+        tagIngredients = Collections.unmodifiableMap(tags);
     }
 
-    /** Starts a dish making {@code result}. Defaults: output 1, not heated, nutrition 5, no station, stock 16. */
+    /** Starts a dish making {@code result}. Defaults: output 1, not heated, nutrition 5, no station, stock 16, keepContainers false. */
     public static Builder builder(Item result) {
         return new Builder(result);
     }
@@ -77,6 +104,8 @@ public record Dish(Item result, int outputPerBatch, Map<Item, Integer> ingredien
         private final Item result;
         private int output = 1;
         private final Map<Item, Integer> ingredients = new LinkedHashMap<>();
+        private final Map<TagKey<Item>, Integer> tagIngredients = new LinkedHashMap<>();
+        private boolean keepContainers;
         private boolean heated;
         private int nutrition = 5;
         @Nullable
@@ -96,6 +125,27 @@ public record Dish(Item result, int outputPerBatch, Map<Item, Integer> ingredien
         /** Adds an ingredient (a second call for the same item replaces its count). */
         public Builder ingredient(Item item, int count) {
             this.ingredients.put(Objects.requireNonNull(item, "item"), count);
+            return this;
+        }
+
+        /**
+         * Adds a tag ingredient: {@code count} of any item in the tag (a second call for the same tag replaces its count).
+         *
+         * @since 0.8.0
+         */
+        public Builder ingredient(TagKey<Item> tag, int count) {
+            this.tagIngredients.put(Objects.requireNonNull(tag, "tag"), count);
+            return this;
+        }
+
+        /**
+         * Whether a container an ingredient leaves behind (a bucket, a bottle) is kept rather than used up (default
+         * false).
+         *
+         * @since 0.8.0
+         */
+        public Builder keepContainers(boolean keepContainers) {
+            this.keepContainers = keepContainers;
             return this;
         }
 
@@ -124,11 +174,12 @@ public record Dish(Item result, int outputPerBatch, Map<Item, Integer> ingredien
         }
 
         /**
-         * Throws IllegalArgumentException when there are no ingredients, a count, the output or the stock is below 1, or
+         * Throws IllegalArgumentException when there are no ingredients (item or tag), a count, the output or the stock is below 1, or
          * nutrition is outside 0..20.
          */
         public Dish build() {
-            return new Dish(this.result, this.output, this.ingredients, this.heated, this.nutrition, this.station, this.stock);
+            return new Dish(this.result, this.output, this.ingredients, this.tagIngredients, this.heated, this.nutrition, this.station,
+                this.stock, this.keepContainers);
         }
     }
 }

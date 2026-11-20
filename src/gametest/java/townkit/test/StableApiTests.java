@@ -419,6 +419,66 @@ public final class StableApiTests {
         c.finish(helper);
     }
 
+    /**
+     * TownKitFarming: a blank owner or a null argument is refused on every method that takes one; reads on an empty table
+     * answer empty; removing a rule or seed nobody added is harmless. Nothing stays registered.
+     */
+    @GameTest(template = "empty", timeoutTicks = 100, batch = "townkit_stable_farm")
+    public static void farmContract(GameTestHelper helper) {
+        Checks c = new Checks("farmContract");
+        ResourceLocation id = ResourceLocation.fromNamespaceAndPath("townkit_test", "farm_contract");
+        townkit.api.farm.HarvestRule rule = townkit.api.farm.HarvestRule.builder(id).block(Blocks.WHEAT)
+            .action(new townkit.api.farm.HarvestAction.Use(townkit.api.farm.Holding.EMPTY_HAND)).build();
+        List<Subscription> subs = new ArrayList<>();
+        try {
+            c.check("seedFrom(blank owner) throws IllegalArgumentException", throwsA(IllegalArgumentException.class,
+                () -> subs.add(townkit.api.farm.TownKitFarming.seedFrom(" ", Items.WHEAT_SEEDS, Items.WHEAT, 2))), "");
+            c.check("seedFrom(null seed) throws NullPointerException", throwsA(NullPointerException.class,
+                () -> subs.add(townkit.api.farm.TownKitFarming.seedFrom("townkit-test", null, Items.WHEAT, 2))), "");
+            c.check("removeSeedFrom(blank owner) throws IllegalArgumentException", throwsA(IllegalArgumentException.class,
+                () -> subs.add(townkit.api.farm.TownKitFarming.removeSeedFrom("", Items.WHEAT_SEEDS))), "");
+            c.check("removeSeedFrom(null seed) throws NullPointerException", throwsA(NullPointerException.class,
+                () -> subs.add(townkit.api.farm.TownKitFarming.removeSeedFrom("townkit-test", null))), "");
+            c.check("harvest(blank owner) throws IllegalArgumentException", throwsA(IllegalArgumentException.class,
+                () -> subs.add(townkit.api.farm.TownKitFarming.harvest(" ", rule))), "");
+            c.check("harvest(null rule) throws NullPointerException", throwsA(NullPointerException.class,
+                () -> subs.add(townkit.api.farm.TownKitFarming.harvest("townkit-test", null))), "");
+            c.check("changeHarvest(blank owner) throws IllegalArgumentException", throwsA(IllegalArgumentException.class,
+                () -> subs.add(townkit.api.farm.TownKitFarming.changeHarvest(" ", id, r -> r))), "");
+            c.check("changeHarvest(null change) throws NullPointerException", throwsA(NullPointerException.class,
+                () -> subs.add(townkit.api.farm.TownKitFarming.changeHarvest("townkit-test", id, null))), "");
+            c.check("removeHarvest(blank owner) throws IllegalArgumentException", throwsA(IllegalArgumentException.class,
+                () -> subs.add(townkit.api.farm.TownKitFarming.removeHarvest(" ", id))), "");
+            c.check("removeHarvest(null id) throws NullPointerException", throwsA(NullPointerException.class,
+                () -> subs.add(townkit.api.farm.TownKitFarming.removeHarvest("townkit-test", null))), "");
+            c.check("harvestFor(null) throws NullPointerException", throwsA(NullPointerException.class,
+                () -> townkit.api.farm.TownKitFarming.harvestFor(null)), "");
+            c.check("nothing registered: harvestFor(wheat) is empty", townkit.api.farm.TownKitFarming.harvestFor(Blocks.WHEAT.defaultBlockState()).isEmpty(), "");
+            // removing what nobody added is harmless, and a removal that did land is lifted with its subscription
+            Subscription none = townkit.api.farm.TownKitFarming.removeHarvest("townkit-test", id);
+            subs.add(none);
+            c.check("removeHarvest(an id nobody added) leaves the list empty", townkit.api.farm.TownKitFarming.harvests().stream()
+                .noneMatch(r -> r.id().equals(id)), townkit.api.farm.TownKitFarming.harvests());
+            none.remove(); // a removal wins over an add of the same id, so lift it before adding
+            Subscription added = townkit.api.farm.TownKitFarming.harvest("townkit-test", rule);
+            subs.add(added);
+            c.check("harvest(rule) is listed", townkit.api.farm.TownKitFarming.harvests().stream().anyMatch(r -> r.id().equals(id)), "");
+            Subscription removed = townkit.api.farm.TownKitFarming.removeHarvest("townkit-test", id);
+            subs.add(removed);
+            c.check("removeHarvest(its id) drops the rule", townkit.api.farm.TownKitFarming.harvests().stream()
+                .noneMatch(r -> r.id().equals(id)), townkit.api.farm.TownKitFarming.harvests());
+            removed.remove();
+            c.check("removing the removal brings the rule back", townkit.api.farm.TownKitFarming.harvests().stream()
+                .anyMatch(r -> r.id().equals(id)), townkit.api.farm.TownKitFarming.harvests());
+        } catch (RuntimeException e) {
+            c.check("no exception", false, e);
+        } finally {
+            subs.forEach(Subscription::remove);
+        }
+        c.check("all removed: no rule left", townkit.api.farm.TownKitFarming.harvests().stream().noneMatch(r -> r.id().equals(id)), "");
+        c.finish(helper);
+    }
+
     private static boolean throwsA(Class<? extends Throwable> type, Runnable r) {
         try {
             r.run();

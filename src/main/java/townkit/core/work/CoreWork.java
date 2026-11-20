@@ -30,6 +30,7 @@ import townkit.api.work.ForgeRecipe;
 import townkit.api.work.ForgeRecipeChange;
 import townkit.api.work.OreEntry;
 import townkit.api.work.TierPlace;
+import townkit.core.farm.FarmHooks;
 import townkit.core.work.cook.CookHooks;
 import townkit.core.work.cook.CookOverlay;
 import townkit.core.work.cook.DishCodec;
@@ -75,6 +76,8 @@ public final class CoreWork implements TownKitWorkView {
             CookHooks.refresh();
             ForgeHooks.refresh();
             MineHooks.refresh();
+            FarmHooks.refresh();
+            FarmHooks.started();
         });
         register(CookOverlay.KIND, CookOverlay.GLOBAL.table(), new DishCodec(CookOverlay.REGISTRY));
         register(Stations.KIND, Stations.GLOBAL.table(), new StationCodec(Stations.REGISTRY));
@@ -88,16 +91,28 @@ public final class CoreWork implements TownKitWorkView {
             CookHooks.refresh();
             ForgeHooks.refresh();
             MineHooks.refresh();
+            FarmHooks.refresh();
+            // a /reload ends here, with Towntopia's crop definitions and the tags loaded: report again what only shows now
+            FarmHooks.started();
         });
-        // a material's tag may list other items after a reload
+        // a material's tag, or a tag dish's tag, may list other items after a reload
         NeoForge.EVENT_BUS.addListener((TagsUpdatedEvent e) -> {
-            if (e.getUpdateCause() == TagsUpdatedEvent.UpdateCause.SERVER_DATA_LOAD) ForgeHooks.refresh();
+            if (e.getUpdateCause() != TagsUpdatedEvent.UpdateCause.SERVER_DATA_LOAD) return;
+            ForgeHooks.refresh();
+            CookOverlay.GLOBAL.tagsChanged();
+            townkit.core.farm.HarvestTable.GLOBAL.tagsChanged();
+            FarmHooks.refresh();
+            CookHooks.refresh();
         });
         // a cook station batch whose cook unloads or dies, or whose server stops, still hears stopped (once)
         NeoForge.EVENT_BUS.addListener((EntityLeaveLevelEvent e) -> {
             if (!e.getLevel().isClientSide()) CookHooks.onEntityLeave(e.getEntity());
         });
-        NeoForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> CookHooks.onServerStopping());
+        NeoForge.EVENT_BUS.addListener((ServerStoppingEvent e) -> {
+            CookHooks.onServerStopping();
+            CookOverlay.serverStopping();
+            FarmHooks.serverStopping();
+        });
     }
 
     /**
@@ -106,12 +121,14 @@ public final class CoreWork implements TownKitWorkView {
      */
     public void loadFiles(Map<String, Map<ResourceLocation, JsonElement>> all) {
         WorkLog.GLOBAL.reset();
+        FarmHooks.reloaded();
         for (Map.Entry<String, Kind<?, ?>> k : this.kinds.entrySet()) {
             k.getValue().load(all.getOrDefault(k.getKey(), Map.of()));
         }
         CookHooks.refresh();
         ForgeHooks.refresh();
         MineHooks.refresh();
+        FarmHooks.refresh();
     }
 
     /** Registers a kind's table and the codec for its data files. A kind is registered once. */
@@ -289,7 +306,7 @@ public final class CoreWork implements TownKitWorkView {
     }
 
     /** A registration as a {@link Subscription}; every change refreshes the cook's and smith's hooks and players' screens. */
-    private static Subscription subscription(WorkTable.Handle handle) {
+    public static Subscription subscription(WorkTable.Handle handle) {
         return subscription(handle, () -> false);
     }
 
@@ -297,6 +314,7 @@ public final class CoreWork implements TownKitWorkView {
         CookHooks.refresh();
         ForgeHooks.refresh();
         MineHooks.refresh();
+        FarmHooks.refresh();
         WorkScreens.resend();
         AtomicBoolean removed = new AtomicBoolean();
         return new Subscription() {
@@ -307,6 +325,7 @@ public final class CoreWork implements TownKitWorkView {
                     CookHooks.refresh();
                     ForgeHooks.refresh();
                     MineHooks.refresh();
+                    FarmHooks.refresh();
                     WorkScreens.resend();
                 }
             }
