@@ -8,7 +8,7 @@ On its own TownKit changes almost nothing in your game.
 
 ## For players
 
-- **You need:** Minecraft 1.21.1, NeoForge 21.1.238 or newer, Towntopia 0.1.3 or newer (TownKit 0.8.0), and GeckoLib.
+- **You need:** Minecraft 1.21.1, NeoForge 21.1.238 or newer, Towntopia 0.1.3 or newer (TownKit 0.8.1), and GeckoLib.
 - **Install:** put the jar in your `mods` folder, on the server and on each player's game.
 - **Read more:** the [player guide](docs/README.md) covers installing, what changes in your game, commands, settings, compatibility and an FAQ.
 

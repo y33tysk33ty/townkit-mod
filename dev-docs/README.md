@@ -2,7 +2,7 @@
 
 TownKit is a library for **Towntopia addons**. It holds every change to Towntopia's code, so your addon doesn't need mixins of its own. It gives you a stable API in TownKit's own types, so a Towntopia update gets fixed once, inside TownKit, instead of breaking your addon.
 
-This guide covers TownKit 0.8.0 (Towntopia 0.1.3, Minecraft 1.21.1, NeoForge).
+This guide covers TownKit 0.8.1 (Towntopia 0.1.3, Minecraft 1.21.1, NeoForge).
 
 ## Start here
 

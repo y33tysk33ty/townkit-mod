@@ -22,6 +22,7 @@ import javax.annotation.Nullable;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.thread.BlockableEventLoop;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -268,12 +269,20 @@ public final class ForgeHooks {
      * server it switches on the server thread, between ticks, so a plan never sees two ladders.
      */
     public static void refresh() {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        onServerThread(ServerLifecycleHooks.getCurrentServer(), ForgeHooks::apply);
+    }
+
+    /**
+     * Runs {@code task} on {@code server}'s thread: queued from another thread, at once on it or with no server. The
+     * task itself is handed over, never a new check: a stopped server (one still current right after leaving a world)
+     * runs handed-in jobs at once on the caller's thread, and a check there would hand itself over again forever.
+     */
+    static void onServerThread(@Nullable BlockableEventLoop<?> server, Runnable task) {
         if (server != null && !server.isSameThread()) {
-            server.execute(ForgeHooks::refresh);
+            server.execute(task);
             return;
         }
-        apply();
+        task.run();
     }
 
     private static synchronized void apply() {

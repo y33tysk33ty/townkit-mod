@@ -4,7 +4,7 @@
 
 | TownKit | Built for Towntopia |
 |---|---|
-| 0.7.1, 0.7.2, 0.8.0 | 0.1.3 (mod id `towntopia`) |
+| 0.7.1, 0.7.2, 0.8.0, 0.8.1 | 0.1.3 (mod id `towntopia`) |
 | 0.3.0 to 0.7.0 | 0.1.2 |
 
 - **Older Towntopia** than TownKit was built for: NeoForge refuses to load ("Mod townkit requires towntopia <version> or above"). None of TownKit's code runs.

@@ -2,6 +2,15 @@
 
 Stable API (`townkit.api`): before 1.0.0, a minor release may break it, and every break is listed here. Anything removed is deprecated for at least one minor release first. The experimental hooks (`townkit.api.hooks`) follow Towntopia's code and may change with any Towntopia update.
 
+## 0.8.1 (2026-11-23)
+
+Bug-fix release. Made for **Towntopia 0.1.3**. **No API or gameplay changes.**
+
+- **Crash fix:** opening a world right after leaving one could crash the game with a stack overflow error ("mouseClicked event handler", in TownKit's ForgeHooks). Fixed.
+- **Clearer load warnings:** when another mod changes a Towntopia method TownKit also rewrites, the log now names that mod's mixin instead of saying "Towntopia changed, or the rewrite failed". For example, Gash's TownTopia Fix changes the crafting table and stonecutter checks of storage rooms and kitchens and the miner's ore check; TownKit leaves those spots to it (addon stand-ins don't count there while it's installed).
+- **False load warning removed:** since 0.7.1 the log said the miner's ore check (`isOre`) and the smith's gear tier (`tierOf`) "don't match the audit (Towntopia changed?)". That was TownKit counting its own code by mistake; both worked. The warning is gone.
+- Hooks: **7,965** (unchanged).
+
 ## 0.8.0 (2026-11-19)
 
 Modded cooking and farming: Towntopia's cook and farmer can work with other mods' food and crops. Made for **Towntopia 0.1.3**. No breaking changes: the stable API only grows (`Dish` and `DishChange` get new members and the old `Dish` constructor stays; the new package `townkit.api.farm`; everything `@since 0.8.0`). With nothing registered, worlds behave as before.

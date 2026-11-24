@@ -157,7 +157,8 @@ public final class CheckSiteRewriter {
         if (wrong.isEmpty()) {
             return true;
         }
-        warnOnce("count:" + prefix, "TownKit building: {} doesn't match the audit (Towntopia changed?): {}; its checks "
+        warnOnce("count:" + prefix, "TownKit building: {} doesn't match the audit (" + townkit.core.hook.ForeignMixins.auditCause(cls, m)
+                + "): {}; its checks "
                 + "stay as Towntopia ships them", prefix, wrong, null);
         return false;
     }

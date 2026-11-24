@@ -171,8 +171,8 @@ public final class HookMixinPlugin implements IMixinConfigPlugin {
         RewrittenWorkSites.GLOBAL.classRewritten(owner, ids);
         List<String> missing = RewrittenWorkSites.GLOBAL.missing(s, owner);
         if (!missing.isEmpty()) {
-            LOGGER.warn("[TownKit] work: {} audited read(s) in {} were not rewritten (Towntopia changed, or the rewrite "
-                    + "failed); Towntopia's own lists are read there: {}", missing.size(), name, missing);
+            LOGGER.warn("[TownKit] work: {} audited read(s) in {} were not rewritten ({}); Towntopia's own lists are read "
+                    + "there: {}", missing.size(), name, ForeignMixins.cause(targetClass, missing), missing);
         }
         LOGGER.info("[TownKit] work: rewrote {} list reads in {}", n, name);
     }
@@ -222,8 +222,8 @@ public final class HookMixinPlugin implements IMixinConfigPlugin {
         }
         List<String> missing = RewrittenNavSites.missing(s, owner, ids);
         if (!missing.isEmpty()) {
-            LOGGER.warn("[TownKit] nav: {} audited route check(s) in {} were not rewritten (Towntopia changed, or the "
-                    + "rewrite failed); path rules don't apply there: {}", missing.size(), name, missing);
+            LOGGER.warn("[TownKit] nav: {} audited route check(s) in {} were not rewritten ({}); path rules don't apply "
+                    + "there: {}", missing.size(), name, ForeignMixins.cause(targetClass, missing), missing);
         }
         int total = this.navSitesRewritten.addAndGet(n);
         LOGGER.info("[TownKit] nav: rewrote {} route checks in {} ({} so far)", n, name, total);
@@ -272,8 +272,8 @@ public final class HookMixinPlugin implements IMixinConfigPlugin {
         RewrittenSites.GLOBAL.classRewritten(owner, ids);
         List<String> missing = RewrittenSites.missingUsable(v, owner, ids);
         if (!missing.isEmpty()) {
-            LOGGER.warn("[TownKit] building: {} audited check(s) in {} were not rewritten (Towntopia changed, or the "
-                    + "rewrite failed); no stand-in counts there: {}", missing.size(), name, missing);
+            LOGGER.warn("[TownKit] building: {} audited check(s) in {} were not rewritten ({}); no stand-in counts there: "
+                    + "{}", missing.size(), name, ForeignMixins.cause(targetClass, missing), missing);
         }
         int total = this.sitesRewritten.addAndGet(n);
         LOGGER.info("[TownKit] building: rewrote {} block checks in {} ({} so far)", n, name, total);

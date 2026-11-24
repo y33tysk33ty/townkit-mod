@@ -181,8 +181,14 @@ public final class WorkSiteRewriter {
     private static List<Edit> plan(ClassNode cls, WorkSites sites) {
         String owner = cls.name.startsWith(PREFIX) ? cls.name.substring(PREFIX.length()) : cls.name;
         List<Edit> out = new ArrayList<>();
+        Set<String> bodies = new HashSet<>();
+        for (MethodNode m : cls.methods) {
+            if (m.name.startsWith(BODY_PREFIX) && !m.name.startsWith(HOOKED_PREFIX)) bodies.add(m.name + m.desc);
+        }
         for (MethodNode m : List.copyOf(cls.methods)) {
             if (m.instructions.size() == 0 || m.name.startsWith(HOOKED_PREFIX) || m.name.equals(EXTEND)) continue;
+            // a hooked method's wrapper (TownKit's own returns): Towntopia's code is in the body, counted there
+            if (bodies.contains(BODY_PREFIX + m.name + m.desc)) continue;
             String name = m.name.startsWith(BODY_PREFIX) ? m.name.substring(BODY_PREFIX.length()) : m.name;
             String prefix = owner + "#" + name + m.desc + "#";
             Map<String, Integer> found = new HashMap<>();
@@ -206,7 +212,8 @@ public final class WorkSiteRewriter {
             if (wrong.isEmpty()) {
                 out.addAll(mine);
             } else {
-                warnOnce("count:" + prefix, "TownKit work: " + prefix + " doesn't match the audit (Towntopia changed?): " + wrong
+                warnOnce("count:" + prefix, "TownKit work: " + prefix + " doesn't match the audit (" + townkit.core.hook.ForeignMixins.auditCause(cls, m)
+                    + "): " + wrong
                     + "; its reads stay as Towntopia ships them", null);
             }
         }

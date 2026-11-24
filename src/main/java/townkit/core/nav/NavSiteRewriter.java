@@ -164,7 +164,7 @@ public final class NavSiteRewriter {
                     ids.add(id);
                 }
             }
-            if (handled.isEmpty() || !countsMatch(prefix, found, sites)) {
+            if (handled.isEmpty() || !countsMatch(cls, m, prefix, found, sites)) {
                 continue;
             }
             int[] next = {firstFreeLocal(m)};
@@ -187,7 +187,8 @@ public final class NavSiteRewriter {
         return false;
     }
 
-    private static boolean countsMatch(String prefix, Map<String, Integer> found, NavSites sites) {
+    private static boolean countsMatch(ClassNode cls, MethodNode m, String prefix, Map<String, Integer> found,
+            NavSites sites) {
         List<String> wrong = new ArrayList<>();
         found.forEach((key, n) -> {
             int id = sites.siteId(key);
@@ -198,7 +199,8 @@ public final class NavSiteRewriter {
         if (wrong.isEmpty()) {
             return true;
         }
-        warnOnce("count:" + prefix, "TownKit nav: {} doesn't match the audit (Towntopia changed?): {}; its route "
+        warnOnce("count:" + prefix, "TownKit nav: {} doesn't match the audit (" + townkit.core.hook.ForeignMixins.auditCause(cls, m)
+                + "): {}; its route "
                 + "checks stay as Towntopia ships them", prefix, wrong);
         return false;
     }

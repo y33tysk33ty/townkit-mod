@@ -318,4 +318,42 @@ class ForeignInjectorTest {
         }
         return "opcode " + in.getOpcode() + " " + in.getClass().getSimpleName();
     }
+    /**
+     * Gash's TownTopia Fix 1.1.0 redirects every {@code BlockState.is(Block)} in StorageBuilding#scanFunctionalBlocks
+     * to its own handler before TownKit's rewrite runs. TownKit finds its audited crafting table check gone, and the
+     * load warning names the mixin instead of guessing that Towntopia changed.
+     */
+    @Test
+    void anotherModsRedirectOfAnAuditedCheckIsNamedInTheWarning() throws Exception {
+        String owner = "village/building/StorageBuilding";
+        ClassNode cn = load(owner);
+        MethodNode scan = method(cn, "scanFunctionalBlocks");
+        MethodNode handler = new MethodNode(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC, "redirect$gash$recognizeCraftingTable",
+            "(L" + STATE + ";L" + BLOCK + ";)Z", null, null);
+        org.objectweb.asm.tree.AnnotationNode merged =
+            new org.objectweb.asm.tree.AnnotationNode("Lorg/spongepowered/asm/mixin/transformer/meta/MixinMerged;");
+        merged.values = List.of("mixin", "dev.gasharaujo.towntopiafix.mixin.BuildingCraftingMixin", "priority", 1000);
+        handler.visibleAnnotations = List.of(merged);
+        handler.instructions.add(new org.objectweb.asm.tree.InsnNode(Opcodes.ICONST_0));
+        handler.instructions.add(new org.objectweb.asm.tree.InsnNode(Opcodes.IRETURN));
+        cn.methods.add(handler);
+        int redirected = 0;
+        for (AbstractInsnNode in : scan.instructions.toArray()) {
+            if (in instanceof MethodInsnNode mi && mi.owner.equals(STATE) && mi.name.equals("is")
+                    && mi.desc.equals("(L" + BLOCK + ";)Z")) {
+                scan.instructions.set(in, new MethodInsnNode(Opcodes.INVOKESTATIC, cn.name, handler.name, handler.desc, false));
+                redirected++;
+            }
+        }
+        assertTrue(redirected > 0, "StorageBuilding#scanFunctionalBlocks has no BlockState.is(Block) any more");
+
+        SiteVerdicts v = SiteVerdicts.load();
+        java.util.BitSet ids = new java.util.BitSet();
+        CheckSiteRewriter.rewrite(cn, v, ids::set);
+        List<String> missing = townkit.core.building.RewrittenSites.missingUsable(v, owner, ids);
+
+        assertTrue(missing.stream().anyMatch(s -> s.endsWith("#BLOCK_IS#CRAFTING_TABLE")), "missing: " + missing);
+        assertEquals("another mod's mixin changed it first: dev.gasharaujo.towntopiafix.mixin.BuildingCraftingMixin",
+            ForeignMixins.cause(cn, missing));
+    }
 }
